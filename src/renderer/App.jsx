@@ -103,11 +103,11 @@ export default function App() {
           <Route path="/caja" element={<CajaPage />} />
           <Route path="/metricas" element={<MetricasPage />} />
           <Route path="/usuarios" element={license?.plan === 'pro' ? <UsersPage /> : <ProGatePage feature="Usuarios y permisos" />} />
-          <Route path="/auditoria" element={<AuditPage />} />
+          <Route path="/auditoria" element={license?.plan === 'pro' ? <AuditPage /> : <ProGatePage feature="Auditoría" />} />
           <Route path="/configuracion" element={<SettingsPage />} />
           <Route path="/historial" element={<SalesHistoryPage />} />
           <Route path="/devoluciones" element={<DevolucionesPage />} />
-          <Route path="/promociones" element={<PromotionsPage />} />
+          <Route path="/promociones" element={license?.plan === 'pro' ? <PromotionsPage /> : <ProGatePage feature="Promociones y cupones" />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Layout>

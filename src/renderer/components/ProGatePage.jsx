@@ -5,6 +5,8 @@ const proFeatures = [
   { icon: '👥', title: 'Usuarios y permisos', desc: 'Hasta 4 usuarios con roles y permisos personalizados' },
   { icon: '🖥️', title: 'Hasta 4 cajas', desc: 'Múltiples cajas simultáneas para tu negocio' },
   { icon: '🧾', title: 'Facturación electrónica SII', desc: 'Integración con Tango, F32, Simple.cl y más' },
+  { icon: '🏷️', title: 'Promociones y cupones', desc: 'Ofertas, descuentos y cupones para tus clientes' },
+  { icon: '📋', title: 'Auditoría completa', desc: 'Registro detallado de todas las operaciones' },
 ];
 
 export default function ProGatePage({ feature }) {
