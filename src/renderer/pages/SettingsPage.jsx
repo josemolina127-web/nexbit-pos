@@ -67,7 +67,7 @@ export default function SettingsPage() {
             <div>
               <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:4, display:'block' }}>Vigencia</label>
               <div style={{ fontSize: theme.font.sizeBase, fontWeight:600, color: theme.colors.text }}>
-                {license.expira ? `Hasta ${license.expira}` : 'Perpetua'}
+                {license.expira ? `Hasta ${license.expira}` : 'De por vida'}
               </div>
             </div>
           </div>
