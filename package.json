@@ -30,6 +30,13 @@
   "build": {
     "appId": "com.nexbit.pos",
     "productName": "Nexbit POS",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "josemolina127-web",
+        "repo": "nexbit-pos"
+      }
+    ],
     "directories": {
       "output": "release"
     },
@@ -53,7 +60,11 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "perMachine": false
+      "perMachine": false,
+      "artifactName": "Nexbit-POS-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "Nexbit-POS-Portable-${version}.${ext}"
     }
   },
   "keywords": [
