@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.db
+*.db-journal
+.env
+.DS_Store
+Thumbs.db
+data/
+release/
+*.pem
+*.key
