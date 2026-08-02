@@ -6,6 +6,8 @@ const { registerIpcHandlers, endCurrentSession } = require('./ipcHandlers');
 
 let mainWindow;
 
+app.setAppUserModelId('com.nexbit.pos');
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -105,6 +107,8 @@ app.whenReady().then(async () => {
   if (app.isPackaged) {
     autoUpdater.logger = console;
     autoUpdater.autoDownload = true;
+    // Auto-install and relaunch as soon as the update finishes downloading
+    autoUpdater.on('update-downloaded', () => autoUpdater.quitAndInstall(false, true));
     autoUpdater.checkForUpdatesAndNotify().catch(() => {});
   }
 
