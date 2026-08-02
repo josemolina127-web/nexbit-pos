@@ -1,9 +1,14 @@
 // Genera un código de licencia firmado para Nexbit POS.
+// Modalidades:
+//   Básica anual:      --plan basic --dias 365
+//   Básica de por vida: --plan basic        (sin --dias ni --expira)
+//   Pro anual:         --plan pro --dias 365
+//   Pro de por vida:   --plan pro           (sin --dias ni --expira)
 // Uso: node scripts/generar-licencia.js --plan basic --cliente "Almacén Pérez"
 //      node scripts/generar-licencia.js --plan pro --cliente "Mi Empresa" --lic NEX-001
 //      node scripts/generar-licencia.js --plan pro --cliente "X" --dias 365   (expira en 1 año)
 //      node scripts/generar-licencia.js --plan pro --cliente "X" --expira 2026-12-31   (fecha fija)
-// Sin --dias ni --expira la licencia es perpetua. Imprime el código en stdout. Requiere la llave privada (ver crear-llaves.js).
+// Imprime el código en stdout. Requiere la llave privada (ver crear-llaves.js).
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');

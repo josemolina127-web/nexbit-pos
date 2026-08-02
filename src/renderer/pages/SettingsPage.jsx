@@ -138,12 +138,21 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {version === 'pro' && (
-        <div style={{ ...card, padding:20, marginBottom:16 }}>
-          <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>
-            SII / Facturación Electrónica
-            <span style={{ fontSize:'0.6rem', background: theme.colors.primary, color:'#fff', padding:'2px 8px', borderRadius:10, marginLeft:8, verticalAlign:'middle' }}>PRO</span>
-          </h3>
+      <div style={{ ...card, padding:20, marginBottom:16 }}>
+        <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>
+          SII / Facturación Electrónica
+          <span style={{ fontSize:'0.6rem', background: theme.colors.primary, color:'#fff', padding:'2px 8px', borderRadius:10, marginLeft:8, verticalAlign:'middle' }}>PRO</span>
+        </h3>
+        {version !== 'pro' && (
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, padding:'12px 14px', background: theme.colors.primaryLight, borderRadius: theme.radius.md }}>
+            <span style={{ fontSize:'1.2rem' }}>⭐</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize: theme.font.sizeSm, fontWeight:600, color: theme.colors.primary }}>Exclusivo del plan Pro</div>
+              <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.textSecondary }}>Mejora a Pro para emitir boletas electrónicas e integrarte con el SII.</div>
+            </div>
+          </div>
+        )}
+        <div style={version !== 'pro' ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
           <div style={{ display:'flex', alignItems:'center', gap:24, marginBottom:16 }}>
             <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize: theme.font.sizeSm, color: theme.colors.text }}>
               <input type="checkbox" checked={siiConfig.enabled} onChange={e => setSiiConfig({...siiConfig, enabled: e.target.checked})} style={{ width:18, height:18, accentColor: theme.colors.primary }} />
@@ -267,7 +276,7 @@ export default function SettingsPage() {
             </p>
           )}
         </div>
-      )}
+      </div>
 
       <div style={{ ...card, padding:20 }}>
         <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>Información del Sistema</h3>

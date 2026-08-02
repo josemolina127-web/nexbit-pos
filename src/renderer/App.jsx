@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import ActivationScreen from './pages/ActivationScreen';
 import CajaSelectionPage from './pages/CajaSelectionPage';
 import Layout from './components/Layout';
+import ProGatePage from './components/ProGatePage';
 import DashboardPage from './pages/DashboardPage';
 import PosPage from './pages/PosPage';
 import ProductsPage from './pages/ProductsPage';
@@ -101,7 +102,7 @@ export default function App() {
           <Route path="/reportes" element={<ReportsPage />} />
           <Route path="/caja" element={<CajaPage />} />
           <Route path="/metricas" element={<MetricasPage />} />
-          <Route path="/usuarios" element={license?.plan === 'pro' ? <UsersPage /> : <Navigate to="/" />} />
+          <Route path="/usuarios" element={license?.plan === 'pro' ? <UsersPage /> : <ProGatePage feature="Usuarios y permisos" />} />
           <Route path="/auditoria" element={<AuditPage />} />
           <Route path="/configuracion" element={<SettingsPage />} />
           <Route path="/historial" element={<SalesHistoryPage />} />

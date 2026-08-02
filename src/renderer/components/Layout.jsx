@@ -82,7 +82,6 @@ export default function Layout({ children, user, plan, onLogout, cajaName, onCaj
   }, []);
 
   const visibleItems = menuItems.filter(item => {
-    if (item.path === '/usuarios' && plan !== 'pro') return false;
     if (!item.perm) return true;
     return permissions[item.perm];
   });
@@ -112,6 +111,9 @@ export default function Layout({ children, user, plan, onLogout, cajaName, onCaj
                 }}>
                   <span style={{ width:20, textAlign:'center', color: isActive ? theme.colors.sidebarActive : theme.colors.sidebarText, lineHeight:0 }}>{item.icon}</span>
                   <span>{item.label}</span>
+                  {item.path === '/usuarios' && plan !== 'pro' && (
+                    <span style={{ marginLeft:'auto', fontSize:'0.55rem', fontWeight:700, padding:'2px 6px', borderRadius: theme.radius.full, background: theme.colors.primary, color:'#fff', letterSpacing:'0.04em' }}>PRO</span>
+                  )}
                 </div>
               )}
             </NavLink>
