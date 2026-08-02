@@ -1,6 +1,6 @@
 {
   "name": "nexbit-pos",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Nexbit POS - Punto de venta moderno para Windows",
   "main": "src/main/main.js",
   "scripts": {

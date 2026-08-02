@@ -1,5 +1,5 @@
-// Self-check de licencias: activar, estado, huella y código falsificado.
-// Uso: node scripts/test-licencia.js --code "<codigo>"
+// Self-check de licencias: activar, estado, huella, código falsificado, expiración y renovación.
+// Uso: node scripts/test-licencia.js --code "<codigo>" --renovar "<codigo renovacion>" --vencida "<codigo expirado>"
 const os = require('os');
 const path = require('path');
 const Module = require('module');
@@ -24,6 +24,8 @@ function arg(name) {
   await initDatabase();
 
   const proCode = arg('code');
+  const renovarCode = arg('renovar');
+  const vencidaCode = arg('vencida');
   if (!proCode) { console.error('Falta --code'); process.exit(1); }
 
   let status = getStatus();
@@ -49,5 +51,25 @@ function arg(name) {
   if (!falsificada) throw new Error('Código falsificado NO fue rechazado');
 
   console.log('OK: activación, estado, huella y rechazo de falsificación correctos');
+
+  if (renovarCode) {
+    const renovada = activate(renovarCode);
+    console.log('renovada:', JSON.stringify(renovada));
+    if (!renovada.activated || renovada.plan !== 'pro') throw new Error('Renovación falló');
+    status = getStatus();
+    if (!status.activated || !status.expira) throw new Error('Renovación sin expiración');
+    console.log('OK: renovación aplica y extiende la expiración');
+  } else {
+    console.log('(renovación no probada: pasa --renovar)');
+  }
+
+  if (vencidaCode) {
+    let rechazada = false;
+    try { activate(vencidaCode); } catch { rechazada = true; }
+    if (!rechazada) throw new Error('Código expirado NO fue rechazado al activar');
+    console.log('OK: código expirado es rechazado');
+  } else {
+    console.log('(expiración no probada: pasa --vencida)');
+  }
   process.exit(0);
 })().catch(e => { console.error('FALLO:', e.message); process.exit(1); });

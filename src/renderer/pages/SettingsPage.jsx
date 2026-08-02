@@ -47,7 +47,7 @@ export default function SettingsPage() {
       <div style={{ ...card, padding:20, marginBottom:16 }}>
         <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>Licencia del Sistema</h3>
         {license?.activated ? (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:12 }}>
             <div>
               <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:4, display:'block' }}>Plan</label>
               <div style={{ fontSize: theme.font.sizeBase, fontWeight:700, color: license.plan === 'pro' ? theme.colors.primary : theme.colors.text }}>{license.plan === 'pro' ? '⭐ Pro' : '📦 Básica'}</div>
@@ -63,6 +63,12 @@ export default function SettingsPage() {
             <div>
               <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:4, display:'block' }}>Límites</label>
               <div style={{ fontSize: theme.font.sizeBase, fontWeight:600, color: theme.colors.text }}>{license.max_cajas} cajas · {license.max_usuarios} usuarios</div>
+            </div>
+            <div>
+              <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:4, display:'block' }}>Vigencia</label>
+              <div style={{ fontSize: theme.font.sizeBase, fontWeight:600, color: theme.colors.text }}>
+                {license.expira ? `Hasta ${license.expira}` : 'Perpetua'}
+              </div>
             </div>
           </div>
         ) : (

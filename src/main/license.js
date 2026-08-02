@@ -32,6 +32,27 @@ function limitsFor(plan) {
     : { max_cajas: 1, max_usuarios: 1 };
 }
 
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Verdadero si la licencia tiene expiración y ya pasó.
+function isExpired(payload) {
+  return !!payload.expira && payload.expira < today();
+}
+
+function toStatus(payload) {
+  return {
+    activated: true,
+    plan: payload.plan,
+    cliente: payload.cliente,
+    lic: payload.lic,
+    emitida: payload.emitida,
+    expira: payload.expira || null,
+    ...limitsFor(payload.plan),
+  };
+}
+
 // Estado de la licencia activada en este equipo (sin lanzar errores).
 function getStatus() {
   const stored = query(`SELECT valor FROM configuracion WHERE clave = 'licencia_codigo'`)[0];
@@ -41,12 +62,14 @@ function getStatus() {
   catch { return { activated: false, error: 'licencia_invalida' }; }
   const huella = query(`SELECT valor FROM configuracion WHERE clave = 'licencia_huella'`)[0]?.valor;
   if (huella !== getFingerprint()) return { activated: false, error: 'otro_equipo' };
-  return { activated: true, plan: payload.plan, cliente: payload.cliente, lic: payload.lic, ...limitsFor(payload.plan) };
+  if (isExpired(payload)) return { activated: false, error: 'expirada', expira: payload.expira, lic: payload.lic, plan: payload.plan };
+  return toStatus(payload);
 }
 
 // Activa un código en este equipo. Atado a la huella de hardware.
 function activate(code) {
   const payload = parseCode(code);
+  if (isExpired(payload)) throw new Error('Esta licencia expiró el ' + payload.expira);
   const huella = getFingerprint();
   const existing = query(`SELECT valor FROM configuracion WHERE clave = 'licencia_codigo'`)[0];
   if (existing) {
@@ -56,7 +79,7 @@ function activate(code) {
   run(`INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('licencia_codigo', ?)`, [code.trim()]);
   run(`INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('licencia_huella', ?)`, [huella]);
   run(`INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('version', ?)`, [payload.plan]);
-  return { activated: true, plan: payload.plan, cliente: payload.cliente, lic: payload.lic, ...limitsFor(payload.plan) };
+  return toStatus(payload);
 }
 
 module.exports = { parseCode, getStatus, activate, limitsFor };

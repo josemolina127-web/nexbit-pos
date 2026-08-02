@@ -98,8 +98,8 @@ export const mockApi = {
     return Promise.resolve(true);
   },
   getCurrentUser: () => Promise.resolve(currentUser),
-  getLicenseStatus: () => Promise.resolve({ activated: true, plan: 'pro', cliente: 'Modo Demo', lic: 'DEMO', max_cajas: 4, max_usuarios: 4 }),
-  activateLicense: (code) => Promise.resolve({ activated: true, plan: code.includes('PRO') ? 'pro' : 'basic', cliente: 'Modo Demo', lic: 'DEMO', max_cajas: 4, max_usuarios: 4 }),
+  getLicenseStatus: () => Promise.resolve({ activated: true, plan: 'pro', cliente: 'Modo Demo', lic: 'DEMO', emitida: '2026-01-01', expira: null, max_cajas: 4, max_usuarios: 4 }),
+  activateLicense: (code) => Promise.resolve({ activated: true, plan: code.includes('PRO') ? 'pro' : 'basic', cliente: 'Modo Demo', lic: 'DEMO', emitida: '2026-01-01', expira: null, max_cajas: 4, max_usuarios: 4 }),
   getUserPermissions: () => {
     const perms = rolePermissions[currentUser?.rol] || [];
     return Promise.resolve(Object.fromEntries(perms.map(p => [p, true])));
