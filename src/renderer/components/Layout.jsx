@@ -111,7 +111,7 @@ export default function Layout({ children, user, plan, onLogout, cajaName, onCaj
                 }}>
                   <span style={{ width:20, textAlign:'center', color: isActive ? theme.colors.sidebarActive : theme.colors.sidebarText, lineHeight:0 }}>{item.icon}</span>
                   <span>{item.label}</span>
-                  {['/usuarios', '/auditoria', '/promociones'].includes(item.path) && plan !== 'pro' && (
+                  {['/usuarios', '/auditoria', '/promociones'].includes(item.path) && plan !== 'pro' && plan !== 'multi' && (
                     <span style={{ marginLeft:'auto', fontSize:'0.55rem', fontWeight:700, padding:'2px 6px', borderRadius: theme.radius.full, background: theme.colors.primary, color:'#fff', letterSpacing:'0.04em' }}>PRO</span>
                   )}
                 </div>

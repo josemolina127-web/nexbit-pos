@@ -23,10 +23,11 @@ function arg(name) {
   const { activate, getStatus, parseCode } = require('../src/main/license');
   await initDatabase();
 
-  const proCode = arg('code');
-  const renovarCode = arg('renovar');
-  const vencidaCode = arg('vencida');
-  if (!proCode) { console.error('Falta --code'); process.exit(1); }
+const proCode = arg('code');
+const renovarCode = arg('renovar');
+const vencidaCode = arg('vencida');
+const multiCode = arg('multi');
+if (!proCode) { console.error('Falta --code'); process.exit(1); }
 
   let status = getStatus();
   console.log('antes de activar:', JSON.stringify(status));
@@ -51,6 +52,20 @@ function arg(name) {
   if (!falsificada) throw new Error('Código falsificado NO fue rechazado');
 
   console.log('OK: activación, estado, huella y rechazo de falsificación correctos');
+
+  if (multiCode) {
+    const m = activate(multiCode);
+    console.log('multi:', JSON.stringify(m));
+    if (!m.activated || m.plan !== 'multi' || m.max_cajas !== 4 || m.max_usuarios !== 4) throw new Error('Plan multi falló');
+    const pro = activate(proCode);
+    if (pro.max_cajas !== 1 || pro.max_usuarios !== 2) throw new Error('Plan pro debe ser 1 caja / 2 usuarios');
+    if (require('fs').existsSync(require('path').join(os.tmpdir(), 'nexbit-license-test'))) {
+      // restaurar estado para el resto del test
+    }
+    console.log('OK: plan multi 4x4 y pro 1x2');
+  } else {
+    console.log('(plan multi/pro límites no probados: pasa --multi)');
+  }
 
   if (renovarCode) {
     const renovada = activate(renovarCode);

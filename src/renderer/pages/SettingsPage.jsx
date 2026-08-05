@@ -14,6 +14,7 @@ export default function SettingsPage() {
   const [boletas, setBoletas] = useState([]);
   const [showBoletas, setShowBoletas] = useState(false);
   const version = license?.plan || 'basic';
+  const isPremium = version === 'pro' || version === 'multi';
 
   useEffect(() => {
     window.nexbit.getScaleConfig().then(setScaleConfig);
@@ -28,7 +29,7 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    if (version === 'pro') loadBoletas();
+    if (isPremium) loadBoletas();
   }, [version]);
 
   const handleSave = async () => {
@@ -50,7 +51,9 @@ export default function SettingsPage() {
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:12 }}>
             <div>
               <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:4, display:'block' }}>Plan</label>
-              <div style={{ fontSize: theme.font.sizeBase, fontWeight:700, color: license.plan === 'pro' ? theme.colors.primary : theme.colors.text }}>{license.plan === 'pro' ? '⭐ Pro' : '📦 Básica'}</div>
+              <div style={{ fontSize: theme.font.sizeBase, fontWeight:700, color: ['pro','multi'].includes(license.plan) ? theme.colors.primary : theme.colors.text }}>
+                {license.plan === 'multi' ? '🖥️ Multi-Cajas' : license.plan === 'pro' ? '⭐ Pro' : '📦 Básica'}
+              </div>
             </div>
             <div>
               <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:4, display:'block' }}>Cliente</label>
@@ -143,7 +146,7 @@ export default function SettingsPage() {
           SII / Facturación Electrónica
           <span style={{ fontSize:'0.6rem', background: theme.colors.primary, color:'#fff', padding:'2px 8px', borderRadius:10, marginLeft:8, verticalAlign:'middle' }}>PRO</span>
         </h3>
-        {version !== 'pro' && (
+        {!isPremium && (
           <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, padding:'12px 14px', background: theme.colors.primaryLight, borderRadius: theme.radius.md }}>
             <span style={{ fontSize:'1.2rem' }}>⭐</span>
             <div style={{ flex:1 }}>
@@ -152,7 +155,7 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
-        <div style={version !== 'pro' ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
+        <div style={!isPremium ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
           <div style={{ display:'flex', alignItems:'center', gap:24, marginBottom:16 }}>
             <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', fontSize: theme.font.sizeSm, color: theme.colors.text }}>
               <input type="checkbox" checked={siiConfig.enabled} onChange={e => setSiiConfig({...siiConfig, enabled: e.target.checked})} style={{ width:18, height:18, accentColor: theme.colors.primary }} />

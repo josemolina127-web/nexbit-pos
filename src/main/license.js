@@ -22,14 +22,14 @@ function parseCode(code) {
   const ok = crypto.verify(null, payloadBuf, getPublicKey(), sigBuf);
   if (!ok) throw new Error('Licencia inválida o falsificada');
   const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
-  if (!['basic', 'pro'].includes(payload.plan)) throw new Error('Plan de licencia desconocido');
+  if (!['basic', 'pro', 'multi'].includes(payload.plan)) throw new Error('Plan de licencia desconocido');
   return payload;
 }
 
 function limitsFor(plan) {
-  return plan === 'pro'
-    ? { max_cajas: 4, max_usuarios: 4 }
-    : { max_cajas: 1, max_usuarios: 1 };
+  if (plan === 'pro') return { max_cajas: 1, max_usuarios: 2 };
+  if (plan === 'multi') return { max_cajas: 4, max_usuarios: 4 };
+  return { max_cajas: 1, max_usuarios: 1 };
 }
 
 function today() {
@@ -82,4 +82,9 @@ function activate(code) {
   return toStatus(payload);
 }
 
-module.exports = { parseCode, getStatus, activate, limitsFor };
+// Los planes pro y multi comparten las funciones premium (SII, promociones, auditoría, usuarios).
+function isPremium(plan) {
+  return plan === 'pro' || plan === 'multi';
+}
+
+module.exports = { parseCode, getStatus, activate, limitsFor, isPremium };

@@ -4,6 +4,8 @@
 //   Básica de por vida: --plan basic        (sin --dias ni --expira)
 //   Pro anual:         --plan pro --dias 365
 //   Pro de por vida:   --plan pro           (sin --dias ni --expira)
+//   Multi-Cajas anual: --plan multi --dias 365
+//   Multi-Cajas de por vida: --plan multi   (sin --dias ni --expira)
 // Uso: node scripts/generar-licencia.js --plan basic --cliente "Almacén Pérez"
 //      node scripts/generar-licencia.js --plan pro --cliente "Mi Empresa" --lic NEX-001
 //      node scripts/generar-licencia.js --plan pro --cliente "X" --dias 365   (expira en 1 año)
@@ -23,7 +25,7 @@ const plan = arg('plan') || 'basic';
 const cliente = arg('cliente') || 'Cliente';
 const lic = arg('lic') || ('NEX-' + Date.now());
 const dias = parseInt(arg('dias'), 10);
-if (!['basic', 'pro'].includes(plan)) { console.error('--plan debe ser basic o pro'); process.exit(1); }
+if (!['basic', 'pro', 'multi'].includes(plan)) { console.error('--plan debe ser basic, pro o multi'); process.exit(1); }
 
 const keysDir = process.env.NEXBIT_KEYS_DIR || path.join(require('os').homedir(), 'Documents', 'nexbit-keys');
 const privPath = arg('key') || path.join(keysDir, 'private.pem');

@@ -98,8 +98,8 @@ export const mockApi = {
     return Promise.resolve(true);
   },
   getCurrentUser: () => Promise.resolve(currentUser),
-  getLicenseStatus: () => Promise.resolve({ activated: true, plan: 'pro', cliente: 'Modo Demo', lic: 'DEMO', emitida: '2026-01-01', expira: null, max_cajas: 4, max_usuarios: 4 }),
-  activateLicense: (code) => Promise.resolve({ activated: true, plan: code.includes('PRO') ? 'pro' : 'basic', cliente: 'Modo Demo', lic: 'DEMO', emitida: '2026-01-01', expira: null, max_cajas: 4, max_usuarios: 4 }),
+  getLicenseStatus: () => Promise.resolve({ activated: true, plan: 'multi', cliente: 'Modo Demo', lic: 'DEMO', emitida: '2026-01-01', expira: null, max_cajas: 4, max_usuarios: 4 }),
+  activateLicense: (code) => Promise.resolve({ activated: true, plan: 'multi', cliente: 'Modo Demo', lic: 'DEMO', emitida: '2026-01-01', expira: null, max_cajas: 4, max_usuarios: 4 }),
   getUserPermissions: () => {
     const perms = rolePermissions[currentUser?.rol] || [];
     return Promise.resolve(Object.fromEntries(perms.map(p => [p, true])));
@@ -402,7 +402,7 @@ export const mockApi = {
 
   getCajas: () => Promise.resolve([...mockCajas]),
   createCaja: (data) => {
-    const maxCajas = mockVersion === 'pro' ? 4 : 2;
+    const maxCajas = mockVersion === 'pro' || mockVersion === 'multi' ? 4 : 2;
     if (mockCajas.length >= maxCajas) return Promise.reject(new Error(`Límite de cajas (${maxCajas})`));
     const caja = { id: Date.now(), nombre: data.nombre, activa: 1, created_at: nowISO() };
     mockCajas = [...mockCajas, caja];
@@ -488,7 +488,7 @@ export const mockApi = {
 
   getVersion: () => Promise.resolve(mockVersion),
   setVersion: (v) => { mockVersion = v; return Promise.resolve(true); },
-  getMaxCajas: () => Promise.resolve(mockVersion === 'pro' ? 4 : 2),
+  getMaxCajas: () => Promise.resolve(mockVersion === 'pro' || mockVersion === 'multi' ? 4 : 2),
 
   getDailyReport: (date) => {
     const daySales = mockSales.filter(s => !s.anulada && s.fecha.startsWith(date));

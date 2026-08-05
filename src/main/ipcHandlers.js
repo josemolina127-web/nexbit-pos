@@ -1,9 +1,15 @@
 const { ipcMain } = require('electron');
 const crypto = require('crypto');
 const { query, run, getLastInsertId } = require('../database/database');
-const { getStatus, activate } = require('./license');
+const { getStatus, activate, isPremium } = require('./license');
 
 // Límites según la licencia activada (básica: 1 caja, 1 usuario, solo admin).
+function planLabel(plan) {
+  if (plan === 'multi') return 'Multi-Cajas';
+  if (plan === 'pro') return 'Pro';
+  return 'Básica';
+}
+
 function planInfo() {
   const st = getStatus();
   if (st.activated) return st;
@@ -11,7 +17,7 @@ function planInfo() {
 }
 
 function requirePro() {
-  if (planInfo().plan !== 'pro') throw new Error('Disponible solo en versión Pro');
+  if (!isPremium(planInfo().plan)) throw new Error('Disponible solo en versión Pro o Multi-Cajas');
 }
 
 let currentUser = null;
@@ -73,7 +79,7 @@ function registerIpcHandlers() {
     requirePermission('gestionar_usuarios');
     const { max_usuarios } = planInfo();
     const count = query(`SELECT COUNT(*) as cnt FROM usuarios WHERE activo = 1`)[0].cnt;
-    if (count >= max_usuarios) throw new Error(`Límite de usuarios alcanzado (${max_usuarios}). Su plan ${planInfo().plan === 'pro' ? 'Pro' : 'Básica'} permite hasta ${max_usuarios}.`);
+    if (count >= max_usuarios) throw new Error(`Límite de usuarios alcanzado (${max_usuarios}). Su plan ${planLabel(planInfo().plan)} permite hasta ${max_usuarios}.`);
     const hash = hashPassword(data.password);
     run(`INSERT INTO usuarios (nombre_usuario, nombre_completo, password_hash, rol) VALUES (?, ?, ?, ?)`,
       [data.nombre_usuario, data.nombre_completo, hash, data.rol || 'cajero']);
@@ -765,7 +771,7 @@ function registerIpcHandlers() {
     requirePermission('corte_caja');
     const { max_cajas } = planInfo();
     const existing = query(`SELECT COUNT(*) as cnt FROM cajas WHERE activa = 1`)[0].cnt;
-    if (existing >= max_cajas) throw new Error(`Límite de cajas alcanzado (${max_cajas}). Su plan ${planInfo().plan === 'pro' ? 'Pro' : 'Básica'} permite hasta ${max_cajas}.`);
+    if (existing >= max_cajas) throw new Error(`Límite de cajas alcanzado (${max_cajas}). Su plan ${planLabel(planInfo().plan)} permite hasta ${max_cajas}.`);
     run(`INSERT INTO cajas (nombre) VALUES (?)`, [data.nombre]);
     logAudit(currentUser.id, 'crear_caja', `Caja creada: ${data.nombre}`);
     return { id: getLastInsertId() };
