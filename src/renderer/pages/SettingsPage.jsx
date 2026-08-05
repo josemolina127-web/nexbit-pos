@@ -13,6 +13,10 @@ export default function SettingsPage() {
   const [printers, setPrinters] = useState([]);
   const [boletas, setBoletas] = useState([]);
   const [showBoletas, setShowBoletas] = useState(false);
+  const [licCode, setLicCode] = useState('');
+  const [licMsg, setLicMsg] = useState('');
+  const [licErr, setLicErr] = useState('');
+  const [licLoading, setLicLoading] = useState(false);
   const version = license?.plan || 'basic';
   const isPremium = version === 'pro' || version === 'multi';
 
@@ -79,6 +83,39 @@ export default function SettingsPage() {
             Sin licencia activada. Contacta a tu proveedor.
           </div>
         )}
+
+        <div style={{ borderTop: `1px solid ${theme.colors.border}`, marginTop: 16, paddingTop: 16 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <input
+              value={licCode}
+              onChange={e => { setLicCode(e.target.value); setLicMsg(''); setLicErr(''); }}
+              style={{ ...inputStyle.base, flex: 1, fontFamily: 'monospace', fontSize: theme.font.sizeXs }}
+              placeholder="Pega aquí un código de licencia para actualizar el plan (renovación, upgrade, etc.)"
+              spellCheck={false}
+            />
+            <button
+              disabled={licLoading || !licCode.trim()}
+              onClick={async () => {
+                setLicLoading(true); setLicMsg(''); setLicErr('');
+                try {
+                  const st = await window.nexbit.activateLicense(licCode.trim());
+                  setLicense(st);
+                  setLicMsg(`Licencia ${st.lic} activada: ${st.plan === 'multi' ? 'Multi-Cajas' : st.plan === 'pro' ? 'Pro' : 'Básica'}${st.expira ? ` hasta ${st.expira}` : ' de por vida'}`);
+                  setLicCode('');
+                } catch (e2) {
+                  setLicErr(e2.message || 'No se pudo activar la licencia');
+                } finally {
+                  setLicLoading(false);
+                }
+              }}
+              style={{ ...btn.base, ...btn.primary, whiteSpace: 'nowrap' }}
+            >
+              {licLoading ? 'Aplicando...' : 'Aplicar licencia'}
+            </button>
+          </div>
+          {licMsg && <div style={{ color: theme.colors.primary, fontSize: theme.font.sizeXs }}>{licMsg}</div>}
+          {licErr && <div style={{ color: theme.colors.danger, fontSize: theme.font.sizeXs }}>{licErr}</div>}
+        </div>
       </div>
 
       <div style={{ ...card, padding:20, marginBottom:16 }}>
