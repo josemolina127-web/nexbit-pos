@@ -1,10 +1,9 @@
 const path = require('path');
 const { app } = require('electron');
-const initSqlJs = require('sql.js');
+const Database = require('better-sqlite3');
 const fs = require('fs');
 
 let db = null;
-let SQL = null;
 
 function getDbPath() {
   try {
@@ -16,36 +15,28 @@ function getDbPath() {
 }
 
 async function initDatabase() {
-  const wasmPath = path.join(require.resolve('sql.js'), '../../dist/sql-wasm.wasm');
-  SQL = await initSqlJs({ locateFile: () => wasmPath });
   const dbPath = getDbPath();
   const dir = path.dirname(dbPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  if (fs.existsSync(dbPath)) {
-    const buffer = fs.readFileSync(dbPath);
-    db = new SQL.Database(buffer);
-  } else {
-    db = new SQL.Database();
-  }
+  db = new Database(dbPath);
+  db.pragma('journal_mode = WAL');
+  db.pragma('busy_timeout = 30000');
 
   runMigrations();
-  saveDatabase();
   return db;
 }
 
 function runMigrations() {
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS categorias (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nombre TEXT NOT NULL UNIQUE,
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS proveedores (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nombre TEXT NOT NULL,
@@ -54,9 +45,7 @@ function runMigrations() {
       direccion TEXT,
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS productos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       codigo_barras TEXT UNIQUE,
@@ -73,9 +62,7 @@ function runMigrations() {
       updated_at TEXT DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (categoria_id) REFERENCES categorias(id)
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS usuarios (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nombre_usuario TEXT NOT NULL UNIQUE,
@@ -85,9 +72,7 @@ function runMigrations() {
       activo INTEGER NOT NULL DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS permisos_usuario (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario_id INTEGER NOT NULL,
@@ -96,9 +81,7 @@ function runMigrations() {
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
       UNIQUE(usuario_id, permiso)
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS clientes (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nombre TEXT NOT NULL,
@@ -108,9 +91,7 @@ function runMigrations() {
       saldo_pendiente REAL NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS ventas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       fecha TEXT NOT NULL DEFAULT (datetime('now','localtime')),
@@ -127,13 +108,7 @@ function runMigrations() {
       FOREIGN KEY (cliente_id) REFERENCES clientes(id),
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
-  `);
 
-  // Add missing columns if not exists (migration)
-  try { db.run(`ALTER TABLE ventas ADD COLUMN caja_id INTEGER`); } catch (e) {}
-  try { db.run(`ALTER TABLE ventas ADD COLUMN detalle_pago TEXT`); } catch (e) {}
-
-  db.run(`
     CREATE TABLE IF NOT EXISTS ventas_detalle (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       venta_id INTEGER NOT NULL,
@@ -146,18 +121,14 @@ function runMigrations() {
       FOREIGN KEY (venta_id) REFERENCES ventas(id),
       FOREIGN KEY (producto_id) REFERENCES productos(id)
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS cajas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nombre TEXT NOT NULL,
       activa INTEGER NOT NULL DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS sesiones_caja (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       caja_id INTEGER NOT NULL,
@@ -168,23 +139,7 @@ function runMigrations() {
       FOREIGN KEY (caja_id) REFERENCES cajas(id),
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
-  `);
 
-  // Migrate: add caja_id column if not exists (sql.js can't do IF NOT EXISTS for ALTER)
-  try { db.run(`ALTER TABLE cortes_caja ADD COLUMN caja_id INTEGER REFERENCES cajas(id)`); } catch(e) {}
-try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e) {}
-  try { db.run(`ALTER TABLE cupones ADD COLUMN tipo_aplicacion TEXT DEFAULT 'todos'`); } catch(e) {}
-  try { db.run(`ALTER TABLE cupones ADD COLUMN producto_id INTEGER`); } catch(e) {}
-  try { db.run(`ALTER TABLE cupones ADD COLUMN categoria_id INTEGER`); } catch(e) {}
-  try { db.run(`ALTER TABLE cupones ADD COLUMN productos_ids TEXT`); } catch(e) {}
-  try { db.run(`ALTER TABLE descuentos_cantidad ADD COLUMN tipo TEXT DEFAULT 'precio_fijo'`); } catch(e) {}
-  try { db.run(`ALTER TABLE usuarios ADD COLUMN caja_id INTEGER REFERENCES cajas(id)`); } catch(e) {}
-  try { db.run(`ALTER TABLE ventas ADD COLUMN caja_id INTEGER REFERENCES cajas(id)`); } catch(e) {}
-  try { db.run(`ALTER TABLE productos ADD COLUMN proveedor_id INTEGER REFERENCES proveedores(id)`); } catch(e) {}
-  try { db.run(`ALTER TABLE productos ADD COLUMN en_promocion INTEGER DEFAULT 0`); } catch(e) {}
-  try { db.run(`ALTER TABLE productos ADD COLUMN precio_promo REAL`); } catch(e) {}
-
-  db.run(`
     CREATE TABLE IF NOT EXISTS grupos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       nombre TEXT NOT NULL,
@@ -192,18 +147,14 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
       activo INTEGER NOT NULL DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS grupo_detalles (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       grupo_id INTEGER NOT NULL REFERENCES grupos(id),
       producto_id INTEGER NOT NULL REFERENCES productos(id),
       cantidad REAL NOT NULL DEFAULT 1
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS movimientos_inventario (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       producto_id INTEGER NOT NULL,
@@ -218,9 +169,7 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
       FOREIGN KEY (producto_id) REFERENCES productos(id),
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS abonos (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       cliente_id INTEGER NOT NULL,
@@ -232,9 +181,7 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
       FOREIGN KEY (venta_id) REFERENCES ventas(id),
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS cortes_caja (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       fecha_apertura TEXT NOT NULL DEFAULT (datetime('now','localtime')),
@@ -247,9 +194,7 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
       observaciones TEXT,
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS auditoria (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       usuario_id INTEGER,
@@ -260,9 +205,7 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
       created_at TEXT DEFAULT (datetime('now','localtime')),
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS devoluciones (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       venta_id INTEGER,
@@ -274,9 +217,7 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
       FOREIGN KEY (venta_id) REFERENCES ventas(id),
       FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS devoluciones_detalle (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       devolucion_id INTEGER NOT NULL,
@@ -288,9 +229,7 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
       FOREIGN KEY (devolucion_id) REFERENCES devoluciones(id),
       FOREIGN KEY (producto_id) REFERENCES productos(id)
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS documentos_entrada (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       referencia TEXT NOT NULL,
@@ -301,16 +240,12 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
       items_json TEXT DEFAULT '[]',
       created_at TEXT NOT NULL
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS configuracion (
       clave TEXT PRIMARY KEY,
       valor TEXT NOT NULL
     );
-  `);
 
-  db.run(`
     CREATE TABLE IF NOT EXISTS boletas_emitidas (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       folio INTEGER NOT NULL,
@@ -321,10 +256,7 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
       xml_response TEXT DEFAULT '',
       created_at TEXT NOT NULL
     );
-  `);
 
-  // PROMOCIONES Y CUPONES
-  db.run(`
     CREATE TABLE IF NOT EXISTS cupones (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       codigo TEXT NOT NULL UNIQUE,
@@ -338,8 +270,7 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
       activo INTEGER NOT NULL DEFAULT 1,
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
-  `);
-  db.run(`
+
     CREATE TABLE IF NOT EXISTS descuentos_cantidad (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       producto_id INTEGER,
@@ -350,42 +281,62 @@ try { db.run(`ALTER TABLE cortes_caja ADD COLUMN reporte_json TEXT`); } catch(e)
     );
   `);
 
+  // Migrations: add columns if not exists (better-sqlite3 supports IF NOT EXISTS)
+  const addColumn = (table, column, def) => {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+    if (!cols.includes(column)) {
+      db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${def}`);
+    }
+  };
+  addColumn('ventas', 'caja_id', 'INTEGER');
+  addColumn('ventas', 'detalle_pago', 'TEXT');
+  addColumn('cortes_caja', 'caja_id', 'INTEGER REFERENCES cajas(id)');
+  addColumn('cortes_caja', 'reporte_json', 'TEXT');
+  addColumn('cupones', 'tipo_aplicacion', "TEXT DEFAULT 'todos'");
+  addColumn('cupones', 'producto_id', 'INTEGER');
+  addColumn('cupones', 'categoria_id', 'INTEGER');
+  addColumn('cupones', 'productos_ids', 'TEXT');
+  addColumn('descuentos_cantidad', 'tipo', "TEXT DEFAULT 'precio_fijo'");
+  addColumn('usuarios', 'caja_id', 'INTEGER REFERENCES cajas(id)');
+  addColumn('productos', 'proveedor_id', 'INTEGER REFERENCES proveedores(id)');
+  addColumn('productos', 'en_promocion', 'INTEGER DEFAULT 0');
+  addColumn('productos', 'precio_promo', 'REAL');
+
   // Insert default admin if not exists
-  const adminExists = db.exec(`SELECT id FROM usuarios WHERE nombre_usuario = 'admin'`);
-  if (adminExists.length === 0) {
+  const admin = db.prepare(`SELECT id FROM usuarios WHERE nombre_usuario = 'admin'`).get();
+  if (!admin) {
     const hash = require('crypto').createHash('sha256').update('admin123').digest('hex');
-    db.run(`INSERT INTO usuarios (nombre_usuario, nombre_completo, password_hash, rol) VALUES ('admin', 'Administrador', ?, 'admin')`, [hash]);
+    db.prepare(`INSERT INTO usuarios (nombre_usuario, nombre_completo, password_hash, rol) VALUES ('admin', 'Administrador', ?, 'admin')`).run(hash);
   }
 
   // Insert default categories
-  const cats = db.exec(`SELECT id FROM categorias LIMIT 1`);
-  if (cats.length === 0) {
-    db.run(`INSERT INTO categorias (nombre) VALUES ('General')`);
-    db.run(`INSERT INTO categorias (nombre) VALUES ('Abarrotes')`);
-    db.run(`INSERT INTO categorias (nombre) VALUES ('Lácteos')`);
-    db.run(`INSERT INTO categorias (nombre) VALUES ('Bebidas')`);
-    db.run(`INSERT INTO categorias (nombre) VALUES ('Frutas y Verduras')`);
-    db.run(`INSERT INTO categorias (nombre) VALUES ('Carnes')`);
-    db.run(`INSERT INTO categorias (nombre) VALUES ('Limpieza')`);
+  if (!db.prepare(`SELECT id FROM categorias LIMIT 1`).get()) {
+    db.prepare(`INSERT INTO categorias (nombre) VALUES ('General')`).run();
+    db.prepare(`INSERT INTO categorias (nombre) VALUES ('Abarrotes')`).run();
+    db.prepare(`INSERT INTO categorias (nombre) VALUES ('Lácteos')`).run();
+    db.prepare(`INSERT INTO categorias (nombre) VALUES ('Bebidas')`).run();
+    db.prepare(`INSERT INTO categorias (nombre) VALUES ('Frutas y Verduras')`).run();
+    db.prepare(`INSERT INTO categorias (nombre) VALUES ('Carnes')`).run();
+    db.prepare(`INSERT INTO categorias (nombre) VALUES ('Limpieza')`).run();
   }
 
   // Insert default cajas
-  const cajasExist = db.exec(`SELECT id FROM cajas LIMIT 1`);
-  if (cajasExist.length === 0) {
-    db.run(`INSERT INTO cajas (nombre) VALUES ('Caja Principal')`);
+  if (!db.prepare(`SELECT id FROM cajas LIMIT 1`).get()) {
+    db.prepare(`INSERT INTO cajas (nombre) VALUES ('Caja Principal')`).run();
   }
 
   // Insert default proveedores
-  const provExist = db.exec(`SELECT id FROM proveedores LIMIT 1`);
-  if (provExist.length === 0) {
-    db.run(`INSERT INTO proveedores (nombre, telefono, email, direccion) VALUES ('Proveedor General', '555-0000', 'proveedor@email.com', 'Dirección principal')`);
+  if (!db.prepare(`SELECT id FROM proveedores LIMIT 1`).get()) {
+    db.prepare(`INSERT INTO proveedores (nombre, telefono, email, direccion) VALUES ('Proveedor General', '555-0000', 'proveedor@email.com', 'Dirección principal')`).run();
   }
 
   // Insert default config
-  db.run(`INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('descuento_maximo', '30')`);
-  db.run(`INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('empresa_nombre', 'Mi Tienda')`);
-  db.run(`INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('ticket_pie', 'Gracias por su compra')`);
-  db.run(`INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('version', 'basic')`);
+  db.exec(`
+    INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('descuento_maximo', '30');
+    INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('empresa_nombre', 'Mi Tienda');
+    INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('ticket_pie', 'Gracias por su compra');
+    INSERT OR IGNORE INTO configuracion (clave, valor) VALUES ('version', 'basic');
+  `);
 }
 
 function getDb() {
@@ -393,34 +344,18 @@ function getDb() {
   return db;
 }
 
-function saveDatabase() {
-  const dbPath = getDbPath();
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  fs.writeFileSync(dbPath, buffer);
-}
-
 function query(sql, params = []) {
-  const stmt = db.prepare(sql);
-  if (params.length > 0) stmt.bind(params);
-  const results = [];
-  while (stmt.step()) {
-    results.push(stmt.getAsObject());
-  }
-  stmt.free();
-  return results;
+  return db.prepare(sql).all(...params);
 }
 
-let lastInsertId = 0;
 function run(sql, params = []) {
-  db.run(sql, params);
-  // Capture rowid before export(); sql.js export() resets last_insert_rowid() to 0.
-  lastInsertId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
-  saveDatabase();
+  const result = db.prepare(sql).run(...params);
+  return result.lastInsertRowid;
 }
 
 function getLastInsertId() {
-  return lastInsertId;
+  // Last insert id is captured via run(); also readable from sqlite
+  return db.prepare('SELECT last_insert_rowid() AS id').get().id;
 }
 
-module.exports = { initDatabase, getDb, saveDatabase, query, run, getLastInsertId };
+module.exports = { initDatabase, getDb, query, run, getLastInsertId };
