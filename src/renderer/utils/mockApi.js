@@ -571,7 +571,7 @@ export const mockApi = {
   getSiiConfig: () => Promise.resolve({ ...mockSiiConfig }),
   setSiiConfig: (config) => { mockSiiConfig = { ...mockSiiConfig, ...config }; return Promise.resolve(true); },
 
-  getAppInfo: () => Promise.resolve({ version: '1.0.0-dev', name: 'Nexbit POS (Mock)', platform: 'browser' }),
+  getAppInfo: () => Promise.resolve({ version: '1.0.0-dev', name: 'Next Byte (Mock)', platform: 'browser' }),
 
   // Cupones
   getCupones: () => Promise.resolve([...mockCupones]),

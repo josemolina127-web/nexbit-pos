@@ -63,7 +63,7 @@ export default function App() {
     }
   };
 
-  if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#050505', color:'#fff', fontSize:'1.2rem' }}>Cargando Nexbit...</div>;
+  if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#050505', color:'#fff', fontSize:'1.2rem' }}>Cargando Next Byte...</div>;
 
   if (!license?.activated) return <ActivationScreen onActivated={setLicense} error={license?.error === 'otro_equipo' ? 'Esta licencia está activada en otro equipo.' : license?.error === 'expirada' ? `Tu licencia expiró el ${license.expira}. Ingresa un código de renovación.` : undefined} />;
 

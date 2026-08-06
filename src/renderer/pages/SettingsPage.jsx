@@ -321,7 +321,7 @@ export default function SettingsPage() {
       <div style={{ ...card, padding:20 }}>
         <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>Información del Sistema</h3>
         <div style={{ fontSize: theme.font.sizeSm, color: theme.colors.textSecondary }}>
-          <p style={{ marginBottom:4 }}><strong style={{ color: theme.colors.text }}>Nombre:</strong> Nexbit POS</p>
+          <p style={{ marginBottom:4 }}><strong style={{ color: theme.colors.text }}>Nombre:</strong> Next Byte</p>
           <p style={{ marginBottom:4 }}><strong style={{ color: theme.colors.text }}>Versión:</strong> 1.0.0</p>
           <p><strong style={{ color: theme.colors.text }}>Plataforma:</strong> Windows Desktop (Electron)</p>
         </div>

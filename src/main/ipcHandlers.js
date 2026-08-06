@@ -1047,7 +1047,7 @@ function registerIpcHandlers() {
 
   // ==================== APP INFO ====================
   ipcMain.handle('app:getInfo', () => {
-    return { version: '1.0.0', name: 'Nexbit POS', platform: process.platform };
+    return { version: '1.0.0', name: 'Next Byte', platform: process.platform };
   });
 
   ipcMain.handle('sesiones:getCurrent', () => {

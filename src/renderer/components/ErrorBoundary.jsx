@@ -15,7 +15,7 @@ export default class ErrorBoundary extends React.Component {
     if (this.state.error) {
       return (
         <div style={{ padding: 40, fontFamily: 'monospace', background: '#1a1a2e', color: '#fff', minHeight: '100vh' }}>
-          <h1 style={{ color: '#e74c3c' }}>Error al cargar Nexbit</h1>
+          <h1 style={{ color: '#e74c3c' }}>Error al cargar Next Byte</h1>
           <p style={{ color: '#aaa' }}>{this.state.error.message}</p>
           <pre style={{ background: '#333', padding: 16, borderRadius: 8, marginTop: 16, fontSize: '0.8rem', overflow: 'auto', maxHeight: '60vh' }}>
             {this.state.error.stack}

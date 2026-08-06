@@ -14,7 +14,7 @@ function createWindow() {
     height: 800,
     minWidth: 1024,
     minHeight: 600,
-    title: 'Nexbit POS',
+    title: 'Next Byte',
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -81,7 +81,7 @@ function createWindow() {
         buttons: ['Salir', 'Cancelar'],
         defaultId: 1,
         cancelId: 1,
-        title: 'Cerrar Nexbit POS',
+        title: 'Cerrar Next Byte',
         message: '¿Estás seguro de que deseas salir?',
         detail: 'Se cerrará tu sesión actual.',
       });

@@ -145,7 +145,7 @@ export default function DashboardPage() {
 
       {!permissions.ver_reportes && (
         <div style={{ ...card, padding:'40px', textAlign:'center' }}>
-          <p style={{ fontSize: theme.font.sizeSm, color: theme.colors.textMuted }}>Bienvenido a Nexbit. Usa el menú lateral para navegar.</p>
+          <p style={{ fontSize: theme.font.sizeSm, color: theme.colors.textMuted }}>Bienvenido a Next Byte. Usa el menú lateral para navegar.</p>
         </div>
       )}
     </div>

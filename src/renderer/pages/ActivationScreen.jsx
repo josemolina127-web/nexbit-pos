@@ -31,7 +31,7 @@ export default function ActivationScreen({ onActivated, error }) {
           <NexbitLogo size={32} style={{ display:'inline-block' }} />
           <h1 style={{ fontSize: theme.font.sizeXl, fontWeight:700, margin:'16px 0 4px', color: theme.colors.text }}>Activa tu licencia</h1>
           <p style={{ color: theme.colors.textMuted, fontSize: theme.font.sizeSm }}>
-            Ingresa el código que recibiste al comprar Nexbit POS
+            Ingresa el código que recibiste al comprar Next Byte
           </p>
         </div>
         {err && (
