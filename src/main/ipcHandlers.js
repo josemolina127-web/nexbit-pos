@@ -1,6 +1,6 @@
-const { ipcMain } = require('electron');
+const { ipcMain, dialog } = require('electron');
 const crypto = require('crypto');
-const { query, run, getLastInsertId } = require('../database/database');
+const { query, run, getLastInsertId, getDb } = require('../database/database');
 const { getStatus, activate, isPremium } = require('./license');
 
 // Límites según la licencia activada (básica: 1 caja, 1 usuario, solo admin).
@@ -997,6 +997,21 @@ function registerIpcHandlers() {
     if (config.printer !== undefined) run(`INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('sii_printer', ?)`, [config.printer]);
     if (config.auto_print !== undefined) run(`INSERT OR REPLACE INTO configuracion (clave, valor) VALUES ('sii_auto_print', ?)`, [String(config.auto_print)]);
     return true;
+  });
+
+  // ==================== BACKUP ====================
+  ipcMain.handle('backup:create', async () => {
+    requirePro();
+    const db = getDb();
+    const res = await dialog.showSaveDialog({
+      title: 'Respaldar base de datos',
+      defaultPath: `nextbyte_respaldo_${new Date().toISOString().slice(0, 10)}.db`,
+      filters: [{ name: 'Base de datos SQLite', extensions: ['db'] }],
+    });
+    if (res.canceled || !res.filePath) return { canceled: true };
+    await db.backup(res.filePath);
+    logAudit(currentUser.id, 'backup_bd', `Respaldo de base de datos creado en ${res.filePath}`);
+    return { path: res.filePath };
   });
 
   // ==================== SCALE ====================

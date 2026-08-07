@@ -124,6 +124,9 @@ contextBridge.exposeInMainWorld('nexbit', {
   getSiiConfig: () => ipcRenderer.invoke('sii:getConfig'),
   setSiiConfig: (config) => ipcRenderer.invoke('sii:setConfig', config),
 
+  // Backup
+  backupDatabase: () => ipcRenderer.invoke('backup:create'),
+
   // App
   getAppInfo: () => ipcRenderer.invoke('app:getInfo'),
 

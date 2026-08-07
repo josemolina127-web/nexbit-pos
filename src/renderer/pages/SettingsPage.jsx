@@ -17,6 +17,9 @@ export default function SettingsPage() {
   const [licMsg, setLicMsg] = useState('');
   const [licErr, setLicErr] = useState('');
   const [licLoading, setLicLoading] = useState(false);
+  const [backingUp, setBackingUp] = useState(false);
+  const [backupMsg, setBackupMsg] = useState('');
+  const [backupErr, setBackupErr] = useState('');
   const version = license?.plan || 'basic';
   const isPremium = version === 'pro' || version === 'multi';
 
@@ -315,6 +318,47 @@ export default function SettingsPage() {
               La integración se activará al cerrar una venta. Si el proveedor responde correctamente, se generará el DTE y se imprimirá la boleta automáticamente.
             </p>
           )}
+        </div>
+      </div>
+
+      <div style={{ ...card, padding:20, marginBottom:16 }}>
+        <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>
+          Respaldo de Base de Datos
+          <span style={{ fontSize:'0.6rem', background: theme.colors.primary, color:'#fff', padding:'2px 8px', borderRadius:10, marginLeft:8, verticalAlign:'middle' }}>PRO</span>
+        </h3>
+        {!isPremium && (
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, padding:'12px 14px', background: theme.colors.primaryLight, borderRadius: theme.radius.md }}>
+            <span style={{ fontSize:'1.2rem' }}>⭐</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize: theme.font.sizeSm, fontWeight:600, color: theme.colors.primary }}>Exclusivo del plan Pro</div>
+              <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.textSecondary }}>Mejora a Pro para respaldar tu base de datos fácilmente.</div>
+            </div>
+          </div>
+        )}
+        <div style={!isPremium ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
+          <p style={{ fontSize: theme.font.sizeSm, color: theme.colors.textSecondary, marginBottom:12 }}>
+            Crea una copia de seguridad de toda tu información (productos, ventas, clientes) en la carpeta o disco que elijas. Se recomienda respaldar a diario, preferentemente una vez al día al cierre.
+          </p>
+          <button
+            disabled={backingUp}
+            onClick={async () => {
+              setBackingUp(true); setBackupMsg(''); setBackupErr('');
+              try {
+                const r = await window.nexbit.backupDatabase();
+                if (r.canceled) return;
+                setBackupMsg(`Respaldo creado correctamente en: ${r.path}`);
+              } catch (e2) {
+                setBackupErr(e2.message || 'No se pudo crear el respaldo');
+              } finally {
+                setBackingUp(false);
+              }
+            }}
+            style={{ ...btn.base, ...btn.primary }}
+          >
+            {backingUp ? 'Respaldando...' : '💾 Respaldar base de datos'}
+          </button>
+          {backupMsg && <div style={{ color: theme.colors.primary, fontSize: theme.font.sizeXs, marginTop:8 }}>{backupMsg}</div>}
+          {backupErr && <div style={{ color: theme.colors.danger, fontSize: theme.font.sizeXs, marginTop:8 }}>{backupErr}</div>}
         </div>
       </div>
 

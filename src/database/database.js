@@ -358,4 +358,4 @@ function getLastInsertId() {
   return db.prepare('SELECT last_insert_rowid() AS id').get().id;
 }
 
-module.exports = { initDatabase, getDb, query, run, getLastInsertId };
+module.exports = { initDatabase, getDb, getDbPath, query, run, getLastInsertId };
