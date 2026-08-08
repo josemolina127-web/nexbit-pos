@@ -113,6 +113,29 @@ Una sola base de datos compartida en la red local. Un equipo hace de **servidor*
 - Cierra todos los equipos de forma ordenada al final del día (con el botón "Salir" de la aplicación).
 - **El respaldo diario se hace en el PC servidor** (ahí vive la base de datos compartida).
 
+### Configuración paso a paso
+
+**En el PC servidor (solo una vez):**
+
+1. Abre la aplicación en un plan **Multi-Cajas** y ve a **Configuración → Base de Datos**.
+2. Pulsa el botón **"Crear carpeta servidor"**. La aplicación:
+   - Crea la carpeta compartida en el equipo (unidad C:).
+   - Comparte esa carpeta en la red local con acceso de lectura y escritura para las cajas (acepta la ventana de Windows que pida permisos, si aparece).
+3. Aparecerá la **ruta de red** (algo como `\\NOMBRE_DEL_PC\NextByte\nexbit.db`).
+4. Pulsa **"Copiar ruta para las cajas"** para copiarla. Puedes copiarla las veces que necesites.
+5. Envía o pega esa ruta en cada caja que vayas a conectar.
+
+**En cada caja (PC cliente):**
+
+1. Ve a **Configuración → Base de Datos**.
+2. Pega la ruta que recibiste del servidor en el campo de ruta.
+3. Pulsa **"Conectar BD"**: la aplicación valida que puede escribir en la base de datos compartida.
+4. La aplicación se reinicia y desde ese momento esa caja opera contra la base de datos del servidor.
+
+**Volver a la base de datos local** (por ejemplo, si el equipo deja de ser parte del sistema Multi-Cajas): en la misma pantalla, pulsa **"Volver a la base de datos local"**. Esto no borra nada; las ventas de ese equipo quedan guardadas en su base local, separadas de la compartida.
+
+> **Importante:** una caja conectada a la base compartida no puede vender si el servidor está apagado. Y la ruta compartida queda guardada en la aplicación: al reiniciar, la caja sigue leyendo la misma ruta.
+
 ---
 
 ## 8. Actualizaciones
