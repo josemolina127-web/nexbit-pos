@@ -6,7 +6,10 @@ import NexbitLogo from './NexbitLogo';
 
 const sideItemStyles = `
   .side-item:not(.side-item--active):hover {
-    background: var(--surfaceHover);
+    background: var(--sidebarHover);
+    color: var(--text);
+  }
+  .side-item:not(.side-item--active):hover svg {
     color: var(--text);
   }
 `;
