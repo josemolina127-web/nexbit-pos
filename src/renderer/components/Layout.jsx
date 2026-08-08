@@ -23,6 +23,7 @@ const icons = {
   auditoria: <S><path d="M12 2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6Z"/><path d="M10 9h3M10 12h3M7 9h.01M7 12h.01"/></S>,
   configuracion: <S><circle cx="10" cy="10" r="2.5"/><path d="M10 1.5v2M10 16.5v2M18.5 10h-2M3.5 10h-2M15.7 4.3l-1.4 1.4M5.7 14.3L4.3 15.7M15.7 15.7l-1.4-1.4M5.7 5.7L4.3 4.3"/></S>,
   metricas: <S><circle cx="10" cy="3" r="2"/><path d="M3 17v-4h4v4zM9 17V9h4v8zM15 17V5h4v12z"/></S>,
+  manual: <S><path d="M4 3h9a3 3 0 0 1 3 3v11H7a3 3 0 0 0-3 3V3z"/><path d="M16 9h1a1 1 0 0 1 1 1v6"/></S>,
 };
 
 const menuItems = [
@@ -41,6 +42,7 @@ const menuItems = [
   { path: '/auditoria', label: 'Auditoría', icon: icons.auditoria, perm: 'ver_auditoria' },
   { path: '/promociones', label: 'Promociones y Cupones', icon: icons.metricas, perm: 'gestionar_productos' },
   { path: '/configuracion', label: 'Config', icon: icons.configuracion, perm: null },
+  { path: '/manual', label: 'Manual', icon: icons.manual, perm: null },
 ];
 
 export default function Layout({ children, user, plan, onLogout, cajaName, onCajaSelect }) {

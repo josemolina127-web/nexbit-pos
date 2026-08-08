@@ -78,7 +78,7 @@ function mdToHtml(md) {
   return '<div class="content">' + html + '</div>';
 }
 
-async function render(title, htmlBody, htmlPath, pdfPath) {
+async function render(title, htmlBody, htmlPath, pdfPath, isManual) {
   const pageHtml = `<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>${title}</title>
 <style>
@@ -100,6 +100,10 @@ async function render(title, htmlBody, htmlPath, pdfPath) {
 </style></head>
 <body>${htmlBody}</body></html>`;
   fs.writeFileSync(htmlPath, pageHtml);
+  if (isManual) {
+    fs.mkdirSync(path.join(__dirname, '..', 'src', 'renderer', 'public'), { recursive: true });
+    fs.writeFileSync(path.join(__dirname, '..', 'src', 'renderer', 'public', 'manual.html'), pageHtml);
+  }
 }
 
 (async () => {
@@ -113,7 +117,7 @@ async function render(title, htmlBody, htmlPath, pdfPath) {
     const base = path.basename(d.file, '.md');
     const htmlPath = path.join(OUT_DIR, base + '.html');
     const pdfPath = path.join(OUT_DIR, base + '.pdf');
-    await render(d.title, html, htmlPath);
+    await render(d.title, html, htmlPath, pdfPath, d.file === 'MANUAL_CLIENTE.md');
     const page = await browser.newPage();
     await page.goto('file://' + htmlPath.replace(/\\/g, '/'), { waitUntil: 'networkidle0' });
     await page.pdf({ path: pdfPath, format: 'A4', printBackground: true, margin: { top: 0, bottom: 0, left: 0, right: 0 } });

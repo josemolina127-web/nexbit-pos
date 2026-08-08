@@ -21,6 +21,7 @@ import SettingsPage from './pages/SettingsPage';
 import SalesHistoryPage from './pages/SalesHistoryPage';
 import DevolucionesPage from './pages/DevolucionesPage';
 import PromotionsPage from './pages/PromotionsPage';
+import ManualPage from './pages/ManualPage';
 
 if (!window.nexbit) {
   window.nexbit = mockApi;
@@ -108,6 +109,7 @@ export default function App() {
           <Route path="/historial" element={<SalesHistoryPage />} />
           <Route path="/devoluciones" element={<DevolucionesPage />} />
           <Route path="/promociones" element={['pro','multi'].includes(license?.plan) ? <PromotionsPage /> : <ProGatePage feature="Promociones y cupones" />} />
+          <Route path="/manual" element={<ManualPage />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </Layout>
