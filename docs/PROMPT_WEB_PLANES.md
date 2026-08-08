@@ -26,21 +26,52 @@ Crea una landing page moderna en español para **Next Byte**, un punto de venta 
    - Respaldo de base de datos con un botón (plan Pro+)
    - Usuarios con permisos y roles (admin, gerente, vendedor) — plan Pro+
    - Actualizaciones automáticas vía internet
-4. **Planes** (6 tarjetas en grid, precio grande, botón **"Agregar al carrito"** en cada una). Cada plan tiene 2 variantes: **Anual** y **De por vida**. Precios exactos en **CLP** (pésos chilenos):
+4. **Planes** (6 tarjetas en grid, precio grande, botón **"Agregar al carrito"** en cada una). Cada plan tiene 2 variantes: **Anual** y **De por vida**. Precios exactos en **CLP** (pesos chilenos), con los **IDs de WooCommerce ya asignados**:
 
-   | Producto | Precio | Botón enlaza a |
+   | Producto | Precio | ID WooCommerce |
    |---|---|---|
-   | Básica — Anual | $120.000 | `{URL_WOO}/?add-to-cart={ID_BASICA_ANUAL}` |
-   | Básica — De por vida | $140.000 | `{URL_WOO}/?add-to-cart={ID_BASICA_VIDA}` |
-   | Pro — Anual | $160.000 | `{URL_WOO}/?add-to-cart={ID_PRO_ANUAL}` |
-   | Pro — De por vida | $180.000 | `{URL_WOO}/?add-to-cart={ID_PRO_VIDA}` |
-   | Multi-Cajas + Pro — Anual | $250.000 | `{URL_WOO}/?add-to-cart={ID_MULTI_ANUAL}` |
-   | Multi-Cajas + Pro — De por vida | $300.000 | `{URL_WOO}/?add-to-cart={ID_MULTI_VIDA}` |
+   | Básica — Anual | $120.000 | 26 |
+   | Básica — De por vida | $140.000 | 27 |
+   | Pro — Anual | $160.000 | 28 |
+   | Pro — De por vida | $180.000 | 29 |
+   | Multi-Cajas + Pro — Anual | $250.000 | 30 |
+   | Multi-Cajas + Pro — De por vida | $300.000 | 31 |
 
    - Agrupar visualmente en 3 columnas (Básica, Pro, Multi-Cajas) y dentro de cada columna 2 tarjetas (Anual / De por vida), marcando las 3 de por vida con un badge "MEJOR VALOR" y en naranja.
-   - **Los botones "Agregar al carrito" deben apuntar a un enlace WooCommerce `?add-to-cart=`** (esto MODO directo agrega el producto al carrito sin pasar por la página del producto).
-   - Deja en el JS las constantes: `URL_WOOCOOFF_INSTANCIA`, `ID_BASICA_ANUAL = ''`, `ID_BASICA_VIDA = ''`, etc., todas vacías para rellenar después.
+   - **Los botones "Agregar al carrito" deben apuntar a un enlace WooCommerce `?add-to-cart=`** (agrega el producto al carrito sin pasar por la página del producto).
+   - Deja en el JS las constantes: `URL_WOO` y los IDs (26, 27, 28, 29, 30, 31).
    - Debajo de cada card agregar la nota: "Activa de inmediato por correo. Incluye instalador y código de licencia."
+
+   **Lista de características detallada por plan** (usar exactamente esto en cada tarjeta):
+
+   - **Básica — Anual (id 26)** y **Básica — De por vida (id 27)**:
+     - 1 caja (1 equipo) y 1 usuario
+     - Punto de venta: venta rápida con boleta térmica
+     - Inventario con alertas de stock bajo
+     - Registro de clientes y proveedores
+     - Historial de ventas y devoluciones
+     - Corte de caja diario
+     - Respaldo manual de base de datos (copiar archivo `nexbit.db`)
+     - Actualizaciones automáticas
+     - Soporte por correo
+
+   - **Pro — Anual (id 28)** y **Pro — De por vida (id 29)** (badge "MEJOR VALOR"): todo lo de Básica, más:
+     - 2 usuarios con roles y permisos (admin, gerente, vendedor)
+     - Facturación SII (facturas electrónicas)
+     - Promociones, cupones y descuentos
+     - Auditoría completa: quién vendió, cuándo y cuánto
+     - Botón de respaldo de base de datos con un clic
+     - Reportes avanzados de ventas y métricas
+     - Soporte prioritario por correo
+
+   - **Multi-Cajas + Pro — Anual (id 30)** y **Multi-Cajas + Pro — De por vida (id 31)** (sello "PARA NEGOCIOS CON VARIAS CAJAS"): todo lo de Pro, más:
+     - 4 cajas en red local (todas ven la misma base de datos al instante)
+     - 4 usuarios simultáneos
+     - Configuración guiada de PC servidor con un botón (comparte la carpeta en la red automáticamente)
+     - Conexión de cajas con una ruta compartida (copiar y pegar)
+     - Validación de escritura en la base de datos compartida
+     - Recomendado para locales con más de un cajero o mostrador
+     - Soporte prioritario + asistencia por teléfono
 5. **Cómo funciona / Venta**: 3 pasos — (1) compra 1 licencia (agrega al carrito y paga con Flujo), (2) te enviamos por correo el instalador y tu código de licencia, (3) activas en tu PC y listo.
 6. **Preguntas frecuentes** (acordeón o detalles hijos, mínimo 6):
    - ¿Necesito internet? (solo para instalar/actualizar; la app funciona offline)
