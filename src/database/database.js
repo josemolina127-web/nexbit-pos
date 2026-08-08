@@ -9,12 +9,15 @@ function configPath() {
   return path.join(app.getPath('userData'), 'db-path.json');
 }
 
-function getDbPath() {
+function getDbConfig() {
   try {
-    // Override de ruta (BD compartida en red) si está configurado
-    const cfg = JSON.parse(fs.readFileSync(configPath(), 'utf8'));
-    if (cfg && typeof cfg.path === 'string' && cfg.path.trim()) return cfg.path.trim();
-  } catch {}
+    return JSON.parse(fs.readFileSync(configPath(), 'utf8')) || {};
+  } catch { return {}; }
+}
+
+function getDbPath() {
+  const cfg = getDbConfig();
+  if (cfg && typeof cfg.path === 'string' && cfg.path.trim()) return cfg.path.trim();
   return path.join(app.getPath('userData'), 'nexbit.db');
 }
 
@@ -362,8 +365,14 @@ function setDbPath(dbPath) {
     throw new Error(`Sin permisos de escritura en: ${dir}`);
   }
   fs.mkdirSync(path.dirname(configPath()), { recursive: true });
-  fs.writeFileSync(configPath(), JSON.stringify({ path: p }));
+  fs.writeFileSync(configPath(), JSON.stringify({ ...getDbConfig(), path: p }));
   return p;
+}
+
+function setDbShare(share) {
+  fs.mkdirSync(path.dirname(configPath()), { recursive: true });
+  fs.writeFileSync(configPath(), JSON.stringify({ ...getDbConfig(), share }));
+  return share;
 }
 
 function getDb() {
@@ -385,4 +394,4 @@ function getLastInsertId() {
   return db.prepare('SELECT last_insert_rowid() AS id').get().id;
 }
 
-module.exports = { initDatabase, getDb, getDbPath, setDbPath, query, run, getLastInsertId };
+module.exports = { initDatabase, getDb, getDbPath, getDbConfig, setDbPath, setDbShare, query, run, getLastInsertId };

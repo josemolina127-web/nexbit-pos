@@ -1,7 +1,7 @@
 const { ipcMain, dialog } = require('electron');
 const crypto = require('crypto');
 const path = require('path');
-const { query, run, getLastInsertId, getDb, getDbPath, setDbPath } = require('../database/database');
+const { query, run, getLastInsertId, getDb, getDbPath, getDbConfig, setDbPath, setDbShare } = require('../database/database');
 const { getStatus, activate, isPremium } = require('./license');
 
 // Límites según la licencia activada (básica: 1 caja, 1 usuario, solo admin).
@@ -1001,7 +1001,10 @@ function registerIpcHandlers() {
   });
 
   // ==================== DB PATH (MULTI-CAJA) ====================
-  ipcMain.handle('db:getPath', () => ({ path: getDbPath() }));
+  ipcMain.handle('db:getPath', () => {
+    const cfg = getDbConfig();
+    return { path: getDbPath(), share: cfg.share || null };
+  });
   ipcMain.handle('db:setPath', (_, dbPath) => {
     requirePro();
     const p = setDbPath(dbPath); // maneja tambien quitado (null => local); valida dir/permisos
@@ -1054,12 +1057,14 @@ function registerIpcHandlers() {
     try { fs.unlinkSync(logPath); } catch {}
 
     const hostName = os.hostname();
+    const share = { shareName, shareOk, sharePath: `\\\\${hostName}\\${shareName}\\nexbit.db`, shareError };
+    if (shareOk) setDbShare(share); // persistir para mostrarlo tras reiniciar
     return {
       path: getDbPath(),
       restart: true,
       shareName,
       shareOk,
-      sharePath: `\\\\${hostName}\\${shareName}\\nexbit.db`,
+      sharePath: share.sharePath,
       shareError,
     };
   });
@@ -1134,6 +1139,12 @@ function registerIpcHandlers() {
     const { app } = require('electron');
     app.relaunch();
     app.exit(0);
+    return true;
+  });
+
+  ipcMain.handle('app:copy', (_, text) => {
+    const { clipboard } = require('electron');
+    clipboard.writeText(String(text || ''));
     return true;
   });
 

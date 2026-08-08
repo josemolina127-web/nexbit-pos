@@ -132,6 +132,7 @@ contextBridge.exposeInMainWorld('nexbit', {
   setDbPath: (path) => ipcRenderer.invoke('db:setPath', path),
   createServerFolder: (folderPath) => ipcRenderer.invoke('db:createServer', folderPath),
   restartApp: () => ipcRenderer.invoke('app:restart'),
+  copyText: (text) => ipcRenderer.invoke('app:copy', text),
 
   // App
   getAppInfo: () => ipcRenderer.invoke('app:getInfo'),

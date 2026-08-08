@@ -37,7 +37,14 @@ export default function SettingsPage() {
     window.nexbit.getSiiConfig().then(setSiiConfig);
     window.nexbit.getPrinterConfig().then(setPrinterConfig);
     window.nexbit.getPrinters().then(setPrinters);
-    window.nexbit.getDbPath().then(r => setCurrentDbPath(r.path));
+    window.nexbit.getDbPath().then(r => {
+      setCurrentDbPath(r.path);
+      if (r.share && r.share.sharePath) {
+        setSharePath(r.share.sharePath);
+        setShareOk(r.share.shareOk);
+        if (!r.share.shareOk && r.share.shareError) setShareErr(r.share.shareError);
+      }
+    });
   }, []);
 
   const loadBoletas = () => {
@@ -104,7 +111,7 @@ if (!r.shareOk) {
   const onCopySharePath = async () => {
     if (!sharePath) return;
     try {
-      await navigator.clipboard.writeText(sharePath);
+      await window.nexbit.copyText(sharePath);
       setDbMsg('Ruta copiada al portapapeles');
     } catch (e4) {
       setDbError('No se pudo copiar la ruta');
