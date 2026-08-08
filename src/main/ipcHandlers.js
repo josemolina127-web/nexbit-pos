@@ -1026,13 +1026,33 @@ function registerIpcHandlers() {
     const shareName = 'NextByte';
     let shareOk = false;
     let shareError = null;
+
+    // Crear/compartir requiere admin (UAC). El error 1332 (mapeo de nombres "Everyone")
+    // se evita con un SecurityDescriptor SDDL canónico (WD = Everyone), sin depender del idioma del SO.
+    const ps = [
+      'param([string]$ShareName,[string]$Path,[string]$Log)',
+      '$sddl = "D:P(A;;FA;;;WD)"',
+      'if (Get-SmbShare -Name $ShareName -ErrorAction SilentlyContinue) { Remove-SmbShare -Name $ShareName -Force; Start-Sleep -Milliseconds 800 }',
+      'try { New-SmbShare -Name $ShareName -Path $Path -SecurityDescriptor $sddl | Out-Null; "OK" | Set-Content -Path $Log } catch { $_.Exception.Message | Set-Content -Path $Log }',
+    ].join('; ');
+    const psPath = path.join(os.tmpdir(), `nexbit-share-${Date.now()}.ps1`);
+    const logPath = path.join(dir, '.nexbit-share-result.txt');
+    fs.writeFileSync(psPath, ps, 'utf8');
     try {
-      // net share requiere consola de administrador; si falla se indica shareError
-      await execFileP('net', ['share', shareName + '=' + dir, '/grant:everyone,FULL']);
-      shareOk = true;
+      await execFileP('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+        `Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','${psPath}','-ShareName','${shareName}','-Path','${dir}','-Log','${logPath}'`]);
+      await new Promise(r => setTimeout(r, 1500));
+      if (fs.existsSync(logPath) && fs.readFileSync(logPath, 'utf8').trim() === 'OK') {
+        shareOk = true;
+      } else {
+        shareError = fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8').trim().slice(0, 300) : 'No confirmación (¿UAC no aceptada?)';
+      }
     } catch (e) {
-      shareError = String(e.stderr || e.message || '').split('\n')[0].trim().slice(0, 300);
+      shareError = String(e.stderr || e.message || '').slice(0, 300);
     }
+    try { fs.unlinkSync(psPath); } catch {}
+    try { fs.unlinkSync(logPath); } catch {}
+
     const hostName = os.hostname();
     return {
       path: getDbPath(),

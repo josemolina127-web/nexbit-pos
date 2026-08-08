@@ -89,7 +89,7 @@ export default function SettingsPage() {
       setSharePath(r.sharePath);
       setShareOk(r.shareOk);
 if (!r.shareOk) {
-        setShareErr(r.shareError ? `No se pudo compartir la carpeta en red: ${r.shareError}. Compártela manualmente una vez.` : 'No se pudo compartir la carpeta en red; compártela manualmente.');
+        setShareErr(r.shareError ? `No se pudo compartir la carpeta: ${r.shareError}. Cuando aparezca el aviso de permisos (UAC) acepta con Sí.` : 'No se pudo compartir la carpeta. Acepta el aviso de administrador (UAC) cuando aparezca.');
       }
       setDbMsg(r.shareOk ? 'Carpeta creada, conectada y compartida. Reiniciando la aplicación...' : 'Carpeta creada y base de datos conectada. Reiniciando la aplicación...');
       setCurrentDbPath(r.path);
