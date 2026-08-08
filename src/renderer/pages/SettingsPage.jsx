@@ -447,7 +447,7 @@ if (!r.shareOk) {
             <button style={{ ...btn.base, ...btn.primary, whiteSpace: 'nowrap' }} disabled={dbSaving} onClick={onCreateServer}>
               {dbSaving ? 'Creando...' : '🖥️ Crear carpeta servidor (esta PC)'}
             </button>
-            <button style={{ ...btn.base, ...btn.ghost, whiteSpace: 'nowrap' }} disabled={dbSaving || !sharePathCopiable} onClick={onCopySharePath}>
+            <button style={{ ...btn.base, ...btn.ghost, whiteSpace: 'nowrap' }} disabled={dbSaving || !sharePath} onClick={onCopySharePath}>
               Copiar ruta para las cajas
             </button>
           </div>
