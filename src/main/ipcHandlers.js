@@ -1132,7 +1132,8 @@ function registerIpcHandlers() {
 
   // ==================== APP INFO ====================
   ipcMain.handle('app:getInfo', () => {
-    return { version: '1.0.0', name: 'Next Byte', platform: process.platform };
+    const pkg = require(path.join(__dirname, '..', '..', 'package.json'));
+    return { version: pkg.version, name: 'Next Byte', platform: process.platform };
   });
 
   ipcMain.handle('app:restart', () => {

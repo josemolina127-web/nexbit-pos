@@ -28,10 +28,12 @@ export default function SettingsPage() {
   const [sharePath, setSharePath] = useState('');
   const [shareOk, setShareOk] = useState(false);
   const [shareErr, setShareErr] = useState('');
+  const [appVersion, setAppVersion] = useState('');
   const version = license?.plan || 'basic';
   const isPremium = version === 'pro' || version === 'multi';
 
   useEffect(() => {
+    window.nexbit.getAppInfo().then(i => setAppVersion(i?.version || ''));
     window.nexbit.getScaleConfig().then(setScaleConfig);
     window.nexbit.getLicenseStatus().then(l => setLicense(l || { activated: false }));
     window.nexbit.getSiiConfig().then(setSiiConfig);
@@ -510,7 +512,7 @@ if (!r.shareOk) {
         <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>Información del Sistema</h3>
         <div style={{ fontSize: theme.font.sizeSm, color: theme.colors.textSecondary }}>
           <p style={{ marginBottom:4 }}><strong style={{ color: theme.colors.text }}>Nombre:</strong> Next Byte</p>
-          <p style={{ marginBottom:4 }}><strong style={{ color: theme.colors.text }}>Versión:</strong> 1.0.0</p>
+          <p style={{ marginBottom:4 }}><strong style={{ color: theme.colors.text }}>Versión:</strong> {appVersion || '—'}</p>
           <p><strong style={{ color: theme.colors.text }}>Plataforma:</strong> Windows Desktop (Electron)</p>
         </div>
       </div>
