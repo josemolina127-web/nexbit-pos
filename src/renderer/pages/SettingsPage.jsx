@@ -114,7 +114,18 @@ if (!r.shareOk) {
       await window.nexbit.copyText(sharePath);
       setDbMsg('Ruta copiada al portapapeles');
     } catch (e4) {
-      setDbError('No se pudo copiar la ruta');
+      // fallback: copy por DOM (funciona aunque el IPC falle)
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = sharePath;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        setDbMsg('Ruta copiada al portapapeles');
+      } catch (e5) {
+        setDbError('No se pudo copiar la ruta');
+      }
     }
   };
 
@@ -454,7 +465,7 @@ if (!r.shareOk) {
             <button style={{ ...btn.base, ...btn.primary, whiteSpace: 'nowrap' }} disabled={dbSaving} onClick={onCreateServer}>
               {dbSaving ? 'Creando...' : '🖥️ Crear carpeta servidor (esta PC)'}
             </button>
-            <button style={{ ...btn.base, ...btn.ghost, whiteSpace: 'nowrap' }} disabled={dbSaving || !sharePath} onClick={onCopySharePath}>
+            <button style={{ ...btn.base, ...btn.ghost, whiteSpace: 'nowrap' }} disabled={!sharePath} onClick={onCopySharePath}>
               Copiar ruta para las cajas
             </button>
           </div>
