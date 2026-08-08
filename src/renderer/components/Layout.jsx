@@ -4,6 +4,13 @@ import { theme, card, btn, input as inputStyle, badge, useTheme } from '../style
 import { $clp } from '../utils/format';
 import NexbitLogo from './NexbitLogo';
 
+const sideItemStyles = `
+  .side-item:not(.side-item--active):hover {
+    background: var(--surfaceHover);
+    color: var(--text);
+  }
+`;
+
 const S = ({ children }) => (
   <svg viewBox="0 0 20 20" style={{ width:18, height:18, display:'block', flexShrink:0, fill:'none', stroke:'currentColor', strokeWidth:1.5, strokeLinecap:'round', strokeLinejoin:'round' }}>{children}</svg>
 );
@@ -90,6 +97,7 @@ export default function Layout({ children, user, plan, onLogout, cajaName, onCaj
 
   return (
     <div style={{ display:'flex', height:'100vh', background: theme.colors.background, fontFamily: theme.font.sans }}>
+      <style>{sideItemStyles}</style>
       <aside style={{
         width: 220, background: theme.colors.sidebarBg, display:'flex', flexDirection:'column',
         borderRight: `1px solid ${theme.colors.border}`, flexShrink: 0,
@@ -103,13 +111,14 @@ export default function Layout({ children, user, plan, onLogout, cajaName, onCaj
           {visibleItems.map(item => (
             <NavLink key={item.path} to={item.path} end={item.path === '/'} style={{ textDecoration:'none', color:'inherit' }}>
               {({ isActive }) => (
-                <div style={{
+                <div className={'side-item' + (isActive ? ' side-item--active' : '')} style={{
                   display:'flex', alignItems:'center', gap:10, padding:'10px 16px',
                   margin:'1px 8px', borderRadius: theme.radius.md,
                   color: isActive ? theme.colors.sidebarActive : theme.colors.sidebarText,
                   background: isActive ? theme.colors.sidebarActiveBg : 'transparent',
                   fontSize: theme.font.sizeBase, fontWeight: isActive ? 500 : 400,
                   transition:'all 0.15s ease',
+                  cursor:'pointer',
                 }}>
                   <span style={{ width:20, textAlign:'center', color: isActive ? theme.colors.sidebarActive : theme.colors.sidebarText, lineHeight:0 }}>{item.icon}</span>
                   <span>{item.label}</span>
