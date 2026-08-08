@@ -130,6 +130,7 @@ contextBridge.exposeInMainWorld('nexbit', {
   // Base de datos (multi-caja)
   getDbPath: () => ipcRenderer.invoke('db:getPath'),
   setDbPath: (path) => ipcRenderer.invoke('db:setPath', path),
+  createServerFolder: (folderPath) => ipcRenderer.invoke('db:createServer', folderPath),
   restartApp: () => ipcRenderer.invoke('app:restart'),
 
   // App

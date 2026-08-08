@@ -1,5 +1,6 @@
 const { ipcMain, dialog } = require('electron');
 const crypto = require('crypto');
+const path = require('path');
 const { query, run, getLastInsertId, getDb, getDbPath, setDbPath } = require('../database/database');
 const { getStatus, activate, isPremium } = require('./license');
 
@@ -1005,6 +1006,42 @@ function registerIpcHandlers() {
     requirePro();
     const p = setDbPath(dbPath); // maneja tambien quitado (null => local); valida dir/permisos
     return { path: p, restart: true };
+  });
+
+  // Crea una carpeta local para BD compartida y la comparte en la red (modo servidor).
+  ipcMain.handle('db:createServer', async (_, folderPath) => {
+    requirePro();
+    const fs = require('fs');
+    const os = require('os');
+    const { execFile } = require('child_process');
+    const { promisify } = require('util');
+    const execFileP = promisify(execFile);
+
+    const dir = (folderPath && folderPath.trim()) ? folderPath.trim() : 'C:\\NextByte';
+    if (!path.isAbsolute(dir)) throw new Error('La ruta debe ser absoluta (ej: C:\\NextByte)');
+    fs.mkdirSync(dir, { recursive: true });
+
+    setDbPath(path.join(dir, 'nexbit.db')); // valida + guarda override
+
+    const shareName = 'NextByte';
+    let shareOk = false;
+    let shareError = null;
+    try {
+      // net share requiere consola de administrador; si falla se indica shareError
+      await execFileP('net', ['share', shareName + '=' + dir, '/grant:everyone,FULL']);
+      shareOk = true;
+    } catch (e) {
+      shareError = String(e.stderr || e.message || '').split('\n')[0].trim().slice(0, 300);
+    }
+    const hostName = os.hostname();
+    return {
+      path: getDbPath(),
+      restart: true,
+      shareName,
+      shareOk,
+      sharePath: `\\\\${hostName}\\${shareName}\\nexbit.db`,
+      shareError,
+    };
   });
 
   // ==================== BACKUP ====================

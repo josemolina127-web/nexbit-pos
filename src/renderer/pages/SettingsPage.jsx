@@ -25,6 +25,9 @@ export default function SettingsPage() {
   const [dbSaving, setDbSaving] = useState(false);
   const [dbMsg, setDbMsg] = useState('');
   const [dbError, setDbError] = useState('');
+  const [sharePath, setSharePath] = useState('');
+  const [shareOk, setShareOk] = useState(false);
+  const [shareErr, setShareErr] = useState('');
   const version = license?.plan || 'basic';
   const isPremium = version === 'pro' || version === 'multi';
 
@@ -76,6 +79,35 @@ export default function SettingsPage() {
       setDbError(e3.message || 'No se pudo restaurar la base de datos local');
     } finally {
       setDbSaving(false);
+    }
+  };
+
+  const onCreateServer = async () => {
+    setDbSaving(true); setDbMsg(''); setDbError(''); setShareErr('');
+    try {
+      const r = await window.nexbit.createServerFolder('C:\\NextByte');
+      setSharePath(r.sharePath);
+      setShareOk(r.shareOk);
+if (!r.shareOk) {
+        setShareErr(r.shareError ? `No se pudo compartir la carpeta en red: ${r.shareError}. Compártela manualmente una vez.` : 'No se pudo compartir la carpeta en red; compártela manualmente.');
+      }
+      setDbMsg(r.shareOk ? 'Carpeta creada, conectada y compartida. Reiniciando la aplicación...' : 'Carpeta creada y base de datos conectada. Reiniciando la aplicación...');
+      setCurrentDbPath(r.path);
+      setTimeout(() => window.nexbit.restartApp(), 1500);
+    } catch (e3) {
+      setDbError(e3.message || 'No se pudo configurar el servidor');
+    } finally {
+      setDbSaving(false);
+    }
+  };
+
+  const onCopySharePath = async () => {
+    if (!sharePath) return;
+    try {
+      await navigator.clipboard.writeText(sharePath);
+      setDbMsg('Ruta copiada al portapapeles');
+    } catch (e4) {
+      setDbError('No se pudo copiar la ruta');
     }
   };
 
@@ -411,6 +443,25 @@ export default function SettingsPage() {
           </div>
         )}
         <div style={!isPremium ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <button style={{ ...btn.base, ...btn.primary, whiteSpace: 'nowrap' }} disabled={dbSaving} onClick={onCreateServer}>
+              {dbSaving ? 'Creando...' : '🖥️ Crear carpeta servidor (esta PC)'}
+            </button>
+            <button style={{ ...btn.base, ...btn.ghost, whiteSpace: 'nowrap' }} disabled={dbSaving || !sharePathCopiable} onClick={onCopySharePath}>
+              Copiar ruta para las cajas
+            </button>
+          </div>
+          <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.textSecondary, marginBottom:4 }}>
+            Si este PC es el <strong style={{ color: theme.colors.text }}>servidor</strong>: el botón crea la carpeta, conecta la base de datos y la comparte en la red automáticamente.
+          </div>
+          {sharePath && (
+            <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.textSecondary, marginBottom:12, padding:'8px 10px', background: theme.colors.primaryLight, borderRadius: theme.radius.md }}>
+              <b style={{ color: theme.colors.text }}>Ruta para escribir en las otras cajas:</b>{' '}
+              <code style={{ wordBreak: 'break-all' }}>{sharePath}</code>
+              {shareOk ? <span style={{ color: theme.colors.primary, marginLeft:6 }}>✓ compartida en red</span> : null}
+            </div>
+          )}
+          {shareErr && <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.danger, marginBottom:8 }}>{shareErr}</div>}
           <p style={{ fontSize: theme.font.sizeSm, color: theme.colors.textSecondary, marginBottom:12 }}>
             En modo multi-caja, todas las cajas usan la misma base de datos en una carpeta compartida del servidor (requiere red cableada). Escribe aquí la ruta del archivo de base de datos compartido:
           </p>
