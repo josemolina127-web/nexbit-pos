@@ -20,6 +20,11 @@ export default function SettingsPage() {
   const [backingUp, setBackingUp] = useState(false);
   const [backupMsg, setBackupMsg] = useState('');
   const [backupErr, setBackupErr] = useState('');
+  const [dbPathInput, setDbPathInput] = useState('');
+  const [currentDbPath, setCurrentDbPath] = useState('');
+  const [dbSaving, setDbSaving] = useState(false);
+  const [dbMsg, setDbMsg] = useState('');
+  const [dbError, setDbError] = useState('');
   const version = license?.plan || 'basic';
   const isPremium = version === 'pro' || version === 'multi';
 
@@ -29,6 +34,7 @@ export default function SettingsPage() {
     window.nexbit.getSiiConfig().then(setSiiConfig);
     window.nexbit.getPrinterConfig().then(setPrinterConfig);
     window.nexbit.getPrinters().then(setPrinters);
+    window.nexbit.getDbPath().then(r => setCurrentDbPath(r.path));
   }, []);
 
   const loadBoletas = () => {
@@ -43,6 +49,34 @@ export default function SettingsPage() {
     await window.nexbit.configureScale(scaleConfig);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const onDbConnect = async () => {
+    if (!dbPathInput.trim()) { setDbError('Escribe la ruta de la base de datos compartida'); return; }
+    setDbSaving(true); setDbMsg(''); setDbError('');
+    try {
+      const r = await window.nexbit.setDbPath(dbPathInput.trim());
+      setDbMsg('Base de datos conectada. Reiniciando la aplicación...');
+      setTimeout(() => window.nexbit.restartApp(), 1200);
+      return r;
+    } catch (e3) {
+      setDbError(e3.message || 'No se pudo conectar la base de datos');
+    } finally {
+      setDbSaving(false);
+    }
+  };
+
+  const onDbReset = async () => {
+    setDbSaving(true); setDbMsg(''); setDbError('');
+    try {
+      await window.nexbit.setDbPath('');
+      setDbMsg('Volviendo a la base de datos local. Reiniciando la aplicación...');
+      setTimeout(() => window.nexbit.restartApp(), 1200);
+    } catch (e3) {
+      setDbError(e3.message || 'No se pudo restaurar la base de datos local');
+    } finally {
+      setDbSaving(false);
+    }
   };
 
   return (
@@ -359,6 +393,47 @@ export default function SettingsPage() {
           </button>
           {backupMsg && <div style={{ color: theme.colors.primary, fontSize: theme.font.sizeXs, marginTop:8 }}>{backupMsg}</div>}
           {backupErr && <div style={{ color: theme.colors.danger, fontSize: theme.font.sizeXs, marginTop:8 }}>{backupErr}</div>}
+        </div>
+      </div>
+
+      <div style={{ ...card, padding:20, marginBottom:16 }}>
+        <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>
+          Base de Datos (Multi-Cajas)
+          <span style={{ fontSize:'0.6rem', background: theme.colors.primary, color:'#fff', padding:'2px 8px', borderRadius:10, marginLeft:8, verticalAlign:'middle' }}>PRO</span>
+        </h3>
+        {!isPremium && (
+          <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:16, padding:'12px 14px', background: theme.colors.primaryLight, borderRadius: theme.radius.md }}>
+            <span style={{ fontSize:'1.2rem' }}>🖥️</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize: theme.font.sizeSm, fontWeight:600, color: theme.colors.primary }}>Exclusivo del plan Pro</div>
+              <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.textSecondary }}>Mejora a Pro para conectar varias cajas a una base de datos compartida en red.</div>
+            </div>
+          </div>
+        )}
+        <div style={!isPremium ? { opacity: 0.45, pointerEvents: 'none', userSelect: 'none' } : undefined}>
+          <p style={{ fontSize: theme.font.sizeSm, color: theme.colors.textSecondary, marginBottom:12 }}>
+            En modo multi-caja, todas las cajas usan la misma base de datos en una carpeta compartida del servidor (requiere red cableada). Escribe aquí la ruta del archivo de base de datos compartido:
+          </p>
+          <div style={{ display:'flex', gap:8, marginBottom:12 }}>
+            <input
+              value={dbPathInput}
+              onChange={e => { setDbPathInput(e.target.value); setDbMsg(''); setDbErr(''); }}
+              style={{ ...inputStyle.base, flex: 1, fontFamily: 'monospace', fontSize: theme.font.sizeXs }}
+              placeholder="\\\\SERVIDOR\\carpeta\\nexbit.db"
+              spellCheck={false}
+            />
+            <button style={{ ...btn.base, ...btn.primary, whiteSpace: 'nowrap' }} disabled={dbSaving} onClick={onDbConnect}>
+              {dbSaving ? 'Verificando...' : 'Conectar BD'}
+            </button>
+          </div>
+          <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.textSecondary, marginBottom:8 }}>
+            Ubicación actual: <code style={{ wordBreak: 'break-all' }}>{currentDbPath || 'cargando...'}</code>
+          </div>
+          <button style={{ ...btn.base, ...btn.ghost, marginRight:8 }} disabled={dbSaving} onClick={onDbReset}>
+            Volver a la base de datos local
+          </button>
+          {dbMsg && <div style={{ color: theme.colors.primary, fontSize: theme.font.sizeXs, marginTop:8 }}>{dbMsg}</div>}
+          {dbError && <div style={{ color: theme.colors.danger, fontSize: theme.font.sizeXs, marginTop:8 }}>{dbError}</div>}
         </div>
       </div>
 

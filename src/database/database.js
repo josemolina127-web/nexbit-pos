@@ -5,13 +5,17 @@ const fs = require('fs');
 
 let db = null;
 
+function configPath() {
+  return path.join(app.getPath('userData'), 'db-path.json');
+}
+
 function getDbPath() {
   try {
-    const userDataPath = app.getPath('userData');
-    return path.join(userDataPath, 'nexbit.db');
-  } catch {
-    return path.join(__dirname, '../../data/nexbit.db');
-  }
+    // Override de ruta (BD compartida en red) si está configurado
+    const cfg = JSON.parse(fs.readFileSync(configPath(), 'utf8'));
+    if (cfg && typeof cfg.path === 'string' && cfg.path.trim()) return cfg.path.trim();
+  } catch {}
+  return path.join(app.getPath('userData'), 'nexbit.db');
 }
 
 async function initDatabase() {
@@ -339,6 +343,29 @@ function runMigrations() {
   `);
 }
 
+function setDbPath(dbPath) {
+  if (!dbPath || !dbPath.trim()) {
+    fs.rmSync(configPath(), { force: true });
+    return {};
+  }
+  const p = dbPath.trim();
+  // Validar que la ruta no sea relativa (UNC \\server\share\nexbit.db o C:\...)
+  if (!path.isAbsolute(p)) throw new Error('La ruta debe ser absoluta (ej: \\\\SERVIDOR\\carpeta\\nexbit.db)');
+  // Validar que el directorio exista y sea escribible (prueba con archivo temporal)
+  const dir = path.dirname(p);
+  if (!fs.existsSync(dir)) throw new Error(`El directorio no existe: ${dir}`);
+  const probe = path.join(dir, `.nexbit-write-test-${Date.now()}.tmp`);
+  try {
+    fs.writeFileSync(probe, 'ok');
+    fs.unlinkSync(probe);
+  } catch (e) {
+    throw new Error(`Sin permisos de escritura en: ${dir}`);
+  }
+  fs.mkdirSync(path.dirname(configPath()), { recursive: true });
+  fs.writeFileSync(configPath(), JSON.stringify({ path: p }));
+  return p;
+}
+
 function getDb() {
   if (!db) throw new Error('Database not initialized');
   return db;
@@ -358,4 +385,4 @@ function getLastInsertId() {
   return db.prepare('SELECT last_insert_rowid() AS id').get().id;
 }
 
-module.exports = { initDatabase, getDb, getDbPath, query, run, getLastInsertId };
+module.exports = { initDatabase, getDb, getDbPath, setDbPath, query, run, getLastInsertId };

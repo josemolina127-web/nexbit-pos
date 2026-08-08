@@ -1,6 +1,6 @@
 const { ipcMain, dialog } = require('electron');
 const crypto = require('crypto');
-const { query, run, getLastInsertId, getDb } = require('../database/database');
+const { query, run, getLastInsertId, getDb, getDbPath, setDbPath } = require('../database/database');
 const { getStatus, activate, isPremium } = require('./license');
 
 // Límites según la licencia activada (básica: 1 caja, 1 usuario, solo admin).
@@ -999,6 +999,14 @@ function registerIpcHandlers() {
     return true;
   });
 
+  // ==================== DB PATH (MULTI-CAJA) ====================
+  ipcMain.handle('db:getPath', () => ({ path: getDbPath() }));
+  ipcMain.handle('db:setPath', (_, dbPath) => {
+    requirePro();
+    const p = setDbPath(dbPath); // maneja tambien quitado (null => local); valida dir/permisos
+    return { path: p, restart: true };
+  });
+
   // ==================== BACKUP ====================
   ipcMain.handle('backup:create', async () => {
     requirePro();
@@ -1063,6 +1071,13 @@ function registerIpcHandlers() {
   // ==================== APP INFO ====================
   ipcMain.handle('app:getInfo', () => {
     return { version: '1.0.0', name: 'Next Byte', platform: process.platform };
+  });
+
+  ipcMain.handle('app:restart', () => {
+    const { app } = require('electron');
+    app.relaunch();
+    app.exit(0);
+    return true;
   });
 
   ipcMain.handle('sesiones:getCurrent', () => {

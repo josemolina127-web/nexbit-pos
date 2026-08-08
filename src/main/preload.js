@@ -127,6 +127,11 @@ contextBridge.exposeInMainWorld('nexbit', {
   // Backup
   backupDatabase: () => ipcRenderer.invoke('backup:create'),
 
+  // Base de datos (multi-caja)
+  getDbPath: () => ipcRenderer.invoke('db:getPath'),
+  setDbPath: (path) => ipcRenderer.invoke('db:setPath', path),
+  restartApp: () => ipcRenderer.invoke('app:restart'),
+
   // App
   getAppInfo: () => ipcRenderer.invoke('app:getInfo'),
 
