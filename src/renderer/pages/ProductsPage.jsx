@@ -3,11 +3,15 @@ import { theme, card, cardBody, btn, badge, input as inputStyle, table as t } fr
 import { exportProducts, downloadCsvTemplate, parseCsvFile } from '../utils/exportCsv';
 import { $clp, $stock } from '../utils/format';
 
-export default function ProductsPage() {
+export default function ProductsPage({ plan }) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [providers, setProviders] = useState([]);
   const [search, setSearch] = useState('');
+  const [filterCat, setFilterCat] = useState('');
+  const [filterProv, setFilterProv] = useState('');
+  const [filterPromo, setFilterPromo] = useState(false);
+  const isPro = ['pro', 'multi'].includes(plan);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ nombre:'', codigo_barras:'', precio_venta:0, precio_costo:0, stock:0, stock_minimo:0, categoria_id:'', unidad_medida:'pieza', proveedor_id:'' });
@@ -78,17 +82,50 @@ export default function ProductsPage() {
     window.nexbit.getCategories().then(setCategories);
   };
 
-  const filtered = products.filter(p => !search || p.nombre.toLowerCase().includes(search.toLowerCase()) || (p.codigo_barras && p.codigo_barras.includes(search)));
+  const filtered = products.filter(p => {
+    if (search && !p.nombre.toLowerCase().includes(search.toLowerCase()) && !(p.codigo_barras && p.codigo_barras.includes(search))) return false;
+    if (filterCat && p.categoria_id !== Number(filterCat)) return false;
+    if (filterProv && p.proveedor_id !== Number(filterProv)) return false;
+    if (filterPromo && p.en_promocion !== 1) return false;
+    return true;
+  });
 
   return (
     <div>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+      <div style={{ display:'flex', flexDirection:'column', gap:14, marginBottom:20 }}>
         <div>
           <h1 style={{ fontSize: theme.font.size2xl, fontWeight:700, color: theme.colors.text, margin:0 }}>Productos</h1>
           <p style={{ fontSize: theme.font.sizeSm, color: theme.colors.textSecondary, marginTop:2 }}>{products.length} productos — {categories.length} categorías</p>
         </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <input style={{ ...inputStyle.base, width:240 }} placeholder="Buscar nombre o código..." value={search} onChange={e => setSearch(e.target.value)} />
+<div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:16, flexWrap:'wrap' }}>
+        <input style={{ ...inputStyle.base, width:200, flexShrink:0 }} placeholder="Buscar nombre o código..." value={search} onChange={e => setSearch(e.target.value)} />
+        <select style={{ ...inputStyle.base, width:180, flexShrink:0 }} value={filterCat} onChange={e => setFilterCat(e.target.value)}>
+          <option value="">Todas las categorías</option>
+          {categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+        </select>
+        <select style={{ ...inputStyle.base, width:200, flexShrink:0 }} value={filterProv} onChange={e => setFilterProv(e.target.value)}>
+          <option value="">Todos los proveedores</option>
+          {providers.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+        </select>
+        {isPro ? (
+          <button
+            style={{ ...btn.base, ...(filterPromo ? btn.primary : btn.secondary), flexShrink:0 }}
+            onClick={() => setFilterPromo(!filterPromo)}
+          >
+            🔥 Solo en promoción {filterPromo ? '✓' : ''}
+          </button>
+        ) : (
+          <span style={{
+            fontSize: theme.font.sizeXs, fontWeight:700, padding:'4px 8px', borderRadius: theme.radius.full,
+            background: theme.colors.primary, color:'#fff', letterSpacing:'0.04em', flexShrink:0, opacity:0.6,
+          }}>EN PROMOCIÓN · PRO</span>
+        )}
+        <span style={{ fontSize: theme.font.sizeSm, color: theme.colors.textMuted, marginLeft:'auto' }}>
+          {filtered.length} / {products.length} productos
+        </span>
+      </div>
+
+      <div style={{ display:'flex', gap:8 }}>
           <button onClick={() => exportProducts(products)} style={{ ...btn.base, ...btn.secondary }}>📥 CSV</button>
           <button onClick={downloadCsvTemplate} style={{ ...btn.base, ...btn.secondary }}>📄 Plantilla</button>
           <button onClick={() => fileInputRef.current?.click()} disabled={importing} style={{ ...btn.base, ...btn.secondary }}>
