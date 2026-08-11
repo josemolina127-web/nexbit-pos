@@ -1,0 +1,102 @@
+LEEME - INSTALACION DE LA TIENDA (Nexbit POS web)
+=================================================
+(v1 - Flow.cl + correo SMTP)
+
+La carpeta "tienda" es la pagina publica donde tus clientes eligen plan,
+pagan con Flow y reciben la licencia por correo automaticamente.
+
+------------------------------------------------------------
+PASO 1 - Base de datos (cPanel)
+------------------------------------------------------------
+- cPanel > "Bases de datos MySQL" > crear BD:  nexbit_tienda
+- Crear usuario BD (ej: nexbit_tienda_user) con contrasena fuerte.
+- Asignar el usuario a la BD con "TODOS los privilegios".
+- Las tablas se crean solas la primera vez que se usa la tienda.
+
+------------------------------------------------------------
+PASO 2 - Subir los archivos (cPanel)
+------------------------------------------------------------
+- Correo? No. Usa cPanel > Administrador de archivos (File Manager).
+- Ve a public_html > crea la carpeta "tienda".
+- Sube AHÍ el contenido de la carpeta web/store del proyecto
+  (index.php, pagar.php, webhook.php, resultado.php, admin.php,
+  simular.php, store-funciones.php, lib_*.php, store-config.example.php).
+- Renombra store-config.example.php a store-config.php.
+
+Opcional (recomendado): PHPMailer para el envio de correo con SMTP.
+- Descarga https://github.com/PHPMailer/PHPMailer (boton Code > Download ZIP)
+- Descomprime y sube la carpeta a public_html/tienda/PHPMailer/
+  (la tienda lo usa automaticamente si esta ahi; si no, usa SMTP nativo o mail().
+
+------------------------------------------------------------
+PASO 3 - Datos de Flow (sandbox primero)
+------------------------------------------------------------
+- Entra a https://sandbox.flow.cl con tu cuenta.
+- Crea un "Comercio" del tipo "Pago API / Link de pago" (ve a
+  "Comercios" > "Crear comercio"). El nombre no importa, es la prueba.
+- En el comercio creado vas a "API" (o "Configuracion > API"):
+  copia el CLIENT SECRET o API KEY y SECRET KEY (Flow los llama
+  "apiKey" y "secretKey" de ese comercio).
+- Edita tu sitio: tienda/store-config.php:
+      'SANDBOX' => true,
+      'FLOW_API_KEY' => 'tu apiKey del sandbox',
+      'FLOW_SECRET_KEY' => 'tu secretKey del sandbox',
+      'FLOW_URL_RETORNO' => 'https://TUDOMINIO.cl/tienda/resultado.php',
+      'FLOW_URL_CONFIRMACION' => 'https://TUDOMINIO.cl/tienda/webhook.php',
+  (los precios y el secreto de licencias tambien estan en este archivo)
+- OJO: las URL de retorno/confirmacion se mandan en cada pago, no hace
+  falta configurarlas en el panel de Flow.
+
+------------------------------------------------------------
+PASO 4 - Correo (cPanel)
+------------------------------------------------------------
+- cPanel > "Cuentas de correo" > crea licencias@TUDOMINIO.cl
+- En la tienda/store-config.php:
+      'MAIL_FROM' => 'licencias@TUDOMINIO.cl',
+      'SMTP_HOST' => 'mail.tudominio.cl',
+      'SMTP_PORT' => 465,          (587 con STARTTLS si tu hosting lo exige)
+      'SMTP_USER' => 'licencias@TUDOMINIO.cl',
+      'SMTP_PASS' => 'la contrasena del correo',
+- Problemas de entrega: revisa la carpeta Spam del cliente. Si usas
+  SMTP correcto y SPF/DKIM del cPanel, suele llegar bien.
+
+------------------------------------------------------------
+PASO 5 - Probar (sandbox)
+------------------------------------------------------------
+- Abre  https://TUDOMINIO.cl/tienda/   y compra el plan multi.
+- Te redirige a una pagina de pago DE SANDBOX. Usa la tarjeta de prueba:
+      Numero:  4051 8856 0044 6623   (Visa de prueba)
+      Vencimiento: cualquier fecha futura   CVV: cualquiera
+- En el sandbox de Flow: "Pagos recibidos" > "Simular" > "Aprobar".
+- Al aprobarse, el sandbox dispara el webhook a TU servidor y tu
+  recibes el correo con la licencia.
+- Revisa el resultado por si acaso en:  https://TUDOMINIO.cl/tienda/admin.php
+  (la clave es ADMIN_CLAVE del store-config.php; ahi puedes reenviar
+   la licencia de un pedido pagado).
+- Puedes probar SIN Flow con el simulador: crea el pedido desde admin
+  o directamente en la BD, y abre
+      https://TUDOMINIO.cl/tienda/simular.php?id=1
+  (esto solo funciona con HABILITAR_SIMULADOR=true; en produccion
+  ponlo en false).
+
+------------------------------------------------------------
+PASO 6 - Pasar a produccion
+------------------------------------------------------------
+- Crea el comercio REAL en https://www.flow.cl (tu cuenta real).
+- Copia sus apiKey/secretKey reales y pon en store-config.php:
+      'SANDBOX' => false,
+  y las URL con tu dominio real (igual que en el sandbox).
+- Pon  'HABILITAR_SIMULADOR' => false
+- Cambia 'ADMIN_CLAVE' por una clave larga.
+- (Opcional) En cPanel: "Proteger carpetas" sobre /tienda/admin.php
+  o protege toda la carpeta public_html/tienda-admin.
+
+------------------------------------------------------------
+SEGURIDAD - importante
+------------------------------------------------------------
+- store-config.php contiene tus claves de Flow y SMTP: NO lo subas
+  a GitHub (ya esta en .gitignore) ni lo conserves en sitios publicos.
+- El secreto LICENSE_SECRET viaja en el codigo que reciben todos los
+  clientes (api/index.php). La tienda lo usa para generar licencias
+  automaticamente. Es el diseno actual del producto; si quieres pasarlo
+  a firma asimetrica (mas seguro), avisame y lo migramos.
