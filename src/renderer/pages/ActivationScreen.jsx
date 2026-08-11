@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { theme, input as inputStyle, btn } from '../styles/theme';
 import NexbitLogo from '../components/NexbitLogo';
+import { WHATSAPP_URL_PRO, WHATSAPP_URL_CAJAS } from '../utils/whatsapp';
 
-export default function ActivationScreen({ onActivated, error }) {
+export default function ActivationScreen({ onActivated, error, plan }) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState(error || '');
+  const isBasic = !plan || plan === 'demo' || plan === 'basic';
 
   const handleActivate = async (e) => {
     e.preventDefault();
@@ -47,7 +49,15 @@ export default function ActivationScreen({ onActivated, error }) {
           {loading ? 'Activando...' : 'Activar'}
         </button>
         <p style={{ textAlign:'center', color: theme.colors.textMuted, fontSize: theme.font.sizeXs, marginTop:16 }}>
-          ¿No tienes licencia? Contacta a tu proveedor.
+          {isBasic ? (
+            <>¿Plan básico?{' '}
+              <a href={WHATSAPP_URL_PRO} target="_blank" rel="noreferrer" style={{ color: theme.colors.primary, textDecoration:'none', fontWeight:600 }}>Sube a Pro</a>
+            </>
+          ) : (
+            <>¿Necesitas más cajas?{' '}
+              <a href={WHATSAPP_URL_CAJAS} target="_blank" rel="noreferrer" style={{ color: theme.colors.primary, textDecoration:'none', fontWeight:600 }}>Contacta a tu proveedor</a>
+            </>
+          )}
         </p>
       </form>
     </div>

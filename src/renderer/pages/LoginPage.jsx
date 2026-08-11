@@ -1,11 +1,26 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { theme, input as inputStyle } from '../styles/theme';
 import NexbitLogo from '../components/NexbitLogo';
+import { WHATSAPP_URL_PRO, WHATSAPP_URL_CAJAS } from '../utils/whatsapp';
 
-export default function LoginPage({ onLogin }) {
+export default function LoginPage({ onLogin, plan }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [retryIn, setRetryIn] = useState(0);
+  const isBasic = !plan || plan === 'demo' || plan === 'basic';
+
+  useEffect(() => {
+    if (retryIn <= 0) return;
+    const t = setTimeout(() => setRetryIn(retryIn - 1), 1000);
+    return () => clearTimeout(t);
+  }, [retryIn]);
+
+  const fmt = (s) => {
+    const mm = String(Math.floor(Math.max(0, s) / 60)).padStart(2, '0');
+    const ss = String(Math.max(0, s) % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,7 +29,14 @@ export default function LoginPage({ onLogin }) {
       const user = await window.nexbit.login(username, password);
       onLogin(user);
     } catch (err) {
-      setError('Usuario o contraseña incorrectos');
+      const msg = (err && err.message) || '';
+      const m = msg.match(/(\d+)\s*(segundos|minutos)/);
+      if (/l[ií]mite/.test(msg)) {
+        setRetryIn(m ? (m[2] === 'minutos' ? +m[1] * 60 : +m[1]) : 300);
+        setError('Has alcanzado el límite de intentos de inicio de sesión permitido.');
+      } else {
+        setError('Usuario o contraseña incorrectos');
+      }
     }
   };
 
@@ -37,6 +59,11 @@ export default function LoginPage({ onLogin }) {
         {error && (
           <div style={{ background: theme.colors.dangerLight, color: theme.colors.danger, padding:'10px 14px', borderRadius: theme.radius.md, marginBottom:16, fontSize: theme.font.sizeSm, textAlign:'center' }}>
             {error}
+            {retryIn > 0 && (
+              <div style={{ fontWeight:700, marginTop:6, fontSize: theme.font.sizeBase }}>
+                Reintento en {fmt(retryIn)}
+              </div>
+            )}
           </div>
         )}
         <div style={{ marginBottom:16 }}>
@@ -47,13 +74,21 @@ export default function LoginPage({ onLogin }) {
           <label style={{ display:'block', marginBottom:6, fontSize: theme.font.sizeSm, color: theme.colors.textSecondary, fontWeight:500 }}>Contraseña</label>
           <input type="password" value={password} onChange={e => setPassword(e.target.value)} style={inputStyle.base} placeholder="Ingresa tu contraseña" />
         </div>
-        <button type="submit" style={{
-          width:'100%', padding:'11px', background: '#FF4B00', color:'#fff',
+        <button type="submit" disabled={retryIn > 0} style={{
+          width:'100%', padding:'11px', background: retryIn > 0 ? theme.colors.border : '#FF4B00', color:'#fff',
           border:'none', borderRadius: theme.radius.md, fontSize: theme.font.sizeBase,
-          cursor:'pointer', fontWeight:600, transition:'opacity 0.15s',
+          cursor: retryIn > 0 ? 'not-allowed' : 'pointer', fontWeight:600, transition:'opacity 0.15s',
         }}>Iniciar Sesión</button>
         <p style={{ textAlign:'center', marginTop:16, fontSize: theme.font.sizeXs, color: theme.colors.textMuted }}>
-          Demo: admin / admin123
+          {isBasic ? (
+            <>¿Plan básico?{' '}
+              <a href={WHATSAPP_URL_PRO} target="_blank" rel="noreferrer" style={{ color: theme.colors.primary, textDecoration:'none', fontWeight:600 }}>Sube a Pro</a>
+            </>
+          ) : (
+            <>¿Necesitas más cajas?{' '}
+              <a href={WHATSAPP_URL_CAJAS} target="_blank" rel="noreferrer" style={{ color: theme.colors.primary, textDecoration:'none', fontWeight:600 }}>Contacta a tu proveedor</a>
+            </>
+          )}
         </p>
       </form>
     </div>

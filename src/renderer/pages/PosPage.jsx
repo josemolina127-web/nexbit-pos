@@ -93,6 +93,7 @@ export default function PosPage() {
   }, []);
 
   const addProduct = useCallback(async (product, weight) => {
+    if (product.stock <= 0) return;
     const qty = weight || 1;
     let precio = product.precio_venta;
     const discounted = await getDiscountedPrice(product.id, qty, product.precio_venta);
@@ -249,9 +250,9 @@ export default function PosPage() {
             {selectedClient && <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.primary, marginTop:4 }}>Cliente: {selectedClient.nombre}</div>}
           </div>
 
-          {promoted.length > 0 && (
+          {promoted.some(p => p.stock > 0) && (
             <div style={{ marginBottom:8, display:'flex', gap:4, flexWrap:'wrap' }}>
-              {promoted.map(p => (
+              {promoted.filter(p => p.stock > 0).map(p => (
                 <button key={p.id} onClick={() => addProduct({ ...p, precio_venta: p.precio_promo })} style={{ ...btn.base, padding:'4px 10px', fontSize:'0.75rem', background: theme.colors.warningLight, color: theme.colors.warning, border:`1px solid ${theme.colors.warning}` }}>
                   🏷️ {p.nombre} <strong>${$clp(p.precio_promo)}</strong> <span style={{ textDecoration:'line-through', fontSize:'0.65rem', opacity:0.7 }}>${$clp(p.precio_venta)}</span>
                 </button>

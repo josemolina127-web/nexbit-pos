@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('nexbit', {
   getCurrentUser: () => ipcRenderer.invoke('auth:getCurrentUser'),
   createUser: (data) => ipcRenderer.invoke('auth:createUser', data),
   updateUser: (id, data) => ipcRenderer.invoke('auth:updateUser', id, data),
+  deleteUser: (id) => ipcRenderer.invoke('auth:deleteUser', id),
   getUsers: () => ipcRenderer.invoke('auth:getUsers'),
   getUserPermissions: () => ipcRenderer.invoke('auth:getUserPermissions'),
   getUserPermissionsByUser: (id) => ipcRenderer.invoke('auth:getUserPermissionsByUser', id),

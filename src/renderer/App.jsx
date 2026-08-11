@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage';
 import ActivationScreen from './pages/ActivationScreen';
 import CajaSelectionPage from './pages/CajaSelectionPage';
 import Layout from './components/Layout';
+import InstallerWizard from '../../web/InstallerWizard';
 import ProGatePage from './components/ProGatePage';
 import DashboardPage from './pages/DashboardPage';
 import PosPage from './pages/PosPage';
@@ -31,15 +32,33 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [selectedCaja, setSelectedCaja] = useState(null);
   const [license, setLicense] = useState(null);
+  const [needInstall, setNeedInstall] = useState(false);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    window.nexbit.getLicenseStatus().then(l => {
-      setLicense(l || { activated: false });
-      if (l?.activated) {
-        return window.nexbit.getCurrentUser().then(u => { if (u) setUser(u); });
-      }
-    }).catch(() => setLicense({ activated: false })).finally(() => setLoading(false));
+    (async () => {
+      try {
+        const st = await window.nexbit.getInstallStatus?.();
+        if (st && !(st.config && st.db && st.licencia && st.admin && st.cajas)) {
+          setNeedInstall(true);
+          setLoading(false);
+          return;
+        }
+      } catch (e) { /* desktop o BD caida: flujo normal */ }
+      window.nexbit.getLicenseStatus().then(l => {
+        setLicense(l || { activated: false });
+        if (l?.activated) {
+          return window.nexbit.getCurrentUser().then(u => { if (u) setUser(u); });
+        }
+      }).catch(() => setLicense({ activated: false })).finally(() => setLoading(false));
+    })();
   }, []);
+
+  const handleInstallDone = async ({ usuario, password }) => {
+    const u = await window.nexbit.login(usuario, password);
+    if (u) setUser(u);
+    setLicense(await window.nexbit.getLicenseStatus());
+    setNeedInstall(false);
+  };
 
   const handleLogout = async () => {
     console.log('handleLogout - user:', user?.id, 'selectedCaja:', selectedCaja?.nombre, 'sesionId:', selectedCaja?.sesionId);
@@ -66,9 +85,11 @@ export default function App() {
 
   if (loading) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh', background:'#050505', color:'#fff', fontSize:'1.2rem' }}>Cargando Next Byte...</div>;
 
-  if (!license?.activated) return <ActivationScreen onActivated={setLicense} error={license?.error === 'otro_equipo' ? 'Esta licencia está activada en otro equipo.' : license?.error === 'expirada' ? `Tu licencia expiró el ${license.expira}. Ingresa un código de renovación.` : undefined} />;
+  if (needInstall) return <InstallerWizard onDone={handleInstallDone} />;
 
-  if (!user) return <LoginPage onLogin={setUser} />;
+  if (!license?.activated) return <ActivationScreen onActivated={setLicense} plan={license?.plan} error={license?.error === 'otro_equipo' ? 'Esta licencia está activada en otro equipo.' : license?.error === 'expirada' ? `Tu licencia expiró el ${license.expira}. Ingresa un código de renovación.` : undefined} />;
+
+  if (!user) return <LoginPage onLogin={setUser} plan={license?.plan} />;
 
   if (!selectedCaja) {
     return <CajaSelectionPage user={user} onSelect={setSelectedCaja} onLogout={handleLogout} canSkip={user?.rol === 'admin'} />;

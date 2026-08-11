@@ -59,7 +59,7 @@ export const theme = {
   radius: { sm: '6px', md: '8px', lg: '12px', xl: '16px', full: '9999px' },
   shadow: { sm: 'var(--shadowSm)', md: 'var(--shadowMd)', lg: 'var(--shadowLg)', xl: 'var(--shadowXl)' },
   font: {
-    sans: "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
+    sans: "'Manrope', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
     mono: "'JetBrains Mono', 'Consolas', monospace",
     sizeXs: '0.875rem', sizeSm: '0.9375rem', sizeBase: '1rem',
     sizeLg: '1.125rem', sizeXl: '1.375rem', size2xl: '1.625rem', size3xl: '2rem',
@@ -96,7 +96,8 @@ export const btn = {
 
 export const input = {
   base: {
-    width: '100%', padding: '10px 14px', borderRadius: theme.radius.md,
+    width: '100%', minWidth: 0, maxWidth: '100%', boxSizing: 'border-box',
+    padding: '10px 14px', borderRadius: theme.radius.md,
     border: '1px solid var(--border)', fontSize: theme.font.sizeSm,
     background: 'var(--surface)', color: 'var(--text)', outline: 'none',
     transition: 'border-color 0.15s ease, box-shadow 0.15s ease',

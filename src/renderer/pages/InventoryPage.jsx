@@ -96,7 +96,7 @@ export default function InventoryPage() {
 
   const loadDashboard = useCallback(() => {
     const range = dateFilter === 'all' ? {} : dateRange(dateFilter, monthRef);
-    window.nexbit.getInventoryDashboard(range).then(setDashboard).catch(() => buildLocalDashboard());
+    window.nexbit.getInventoryDashboard(range).then(d => setDashboard({ topProducts: [], sinMovimiento: [], ...d })).catch(() => buildLocalDashboard());
   }, [dateFilter, monthRef, buildLocalDashboard]);
 
   useEffect(() => {

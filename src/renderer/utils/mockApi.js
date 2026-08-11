@@ -120,6 +120,13 @@ export const mockApi = {
     mockUsers = mockUsers.map(u => u.id === id ? { ...u, nombre_completo: data.nombre_completo ?? u.nombre_completo, rol: data.rol ?? u.rol, activo: data.activo !== undefined ? data.activo : u.activo, password: data.password || u.password, nombre_usuario: data.nombre_usuario ?? u.nombre_usuario, permisos: data.permisos || u.permisos } : u);
     return Promise.resolve(true);
   },
+  deleteUser: (id) => {
+    const u = mockUsers.find(x => x.id === id);
+    if (!u) return Promise.reject(new Error('Usuario no encontrado'));
+    if (u.rol === 'admin') return Promise.reject(new Error('No se puede eliminar un usuario admin'));
+    mockUsers = mockUsers.map(x => x.id === id ? { ...x, activo: 0 } : x);
+    return Promise.resolve(true);
+  },
 
   getProducts: () => Promise.resolve(mockProducts),
   getProduct: (id) => Promise.resolve(mockProducts.find(p => p.id === id)),

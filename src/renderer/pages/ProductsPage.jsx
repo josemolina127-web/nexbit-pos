@@ -18,6 +18,9 @@ export default function ProductsPage({ plan }) {
   const [importMsg, setImportMsg] = useState('');
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef(null);
+  const [showWooModal, setShowWooModal] = useState(false);
+  const [woo, setWoo] = useState({ url: '', consumer_key: '', consumer_secret: '', status: '' });
+  const [wooMsg, setWooMsg] = useState('');
 
   const [showCatModal, setShowCatModal] = useState(false);
   const [editingCat, setEditingCat] = useState(null);
@@ -46,6 +49,18 @@ export default function ProductsPage({ plan }) {
     window.nexbit.getProviders().then(setProviders);
   };
   useEffect(load, []);
+
+  const handleImportWoo = async () => {
+    if (!woo.url || !woo.consumer_key || !woo.consumer_secret) { setWooMsg('Completa URL, Consumer Key y Consumer Secret'); return; }
+    setWooMsg('Importando...'); 
+    try {
+      const result = await window.nexbit.importWooProducts(woo);
+      setWooMsg(`✓ ${result.imported} productos importados desde WooCommerce`);
+      load();
+    } catch (err) {
+      setWooMsg('✗ ' + err.message);
+    }
+  };
 
   const roundStock = (val, unit) => {
     const n = Number(val) || 0;
@@ -84,9 +99,9 @@ export default function ProductsPage({ plan }) {
 
   const filtered = products.filter(p => {
     if (search && !p.nombre.toLowerCase().includes(search.toLowerCase()) && !(p.codigo_barras && p.codigo_barras.includes(search))) return false;
-    if (filterCat && p.categoria_id !== Number(filterCat)) return false;
-    if (filterProv && p.proveedor_id !== Number(filterProv)) return false;
-    if (filterPromo && p.en_promocion !== 1) return false;
+    if (filterCat && Number(p.categoria_id) !== Number(filterCat)) return false;
+    if (filterProv && Number(p.proveedor_id) !== Number(filterProv)) return false;
+    if (filterPromo && Number(p.en_promocion) !== 1) return false;
     return true;
   });
 
@@ -131,6 +146,9 @@ export default function ProductsPage({ plan }) {
           <button onClick={() => fileInputRef.current?.click()} disabled={importing} style={{ ...btn.base, ...btn.secondary }}>
             {importing ? 'Importando...' : '📤 Importar CSV'}
           </button>
+          {isPro && (
+          <button onClick={() => { setShowWooModal(true); setWooMsg(''); }} style={{ ...btn.base, ...btn.secondary }}>🛒 WooCommerce</button>
+        )}
           <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImportCsv} style={{ display:'none' }} />
           <button onClick={() => { setShowCatModal(true); setCatName(''); setEditingCat(null); }} style={{ ...btn.base, ...btn.secondary }}>⚙️ Categorías</button>
           <button onClick={() => { setEditing(null); setForm({ nombre:'', codigo_barras:'', precio_venta:0, precio_costo:0, stock:0, stock_minimo:0, categoria_id:'', unidad_medida:'pieza', proveedor_id:'' }); setShowForm(true); }} style={{ ...btn.base, ...btn.primary }}>+ Nuevo</button>
@@ -210,6 +228,43 @@ export default function ProductsPage({ plan }) {
                 ))}
                 {categories.length === 0 && <p style={{ fontSize: theme.font.sizeSm, color: theme.colors.textMuted, textAlign:'center', padding:20 }}>Sin categorías</p>}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showWooModal && (
+        <div style={{
+          position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', zIndex:100,
+          display:'flex', alignItems:'center', justifyContent:'center',
+        }} onClick={() => setShowWooModal(false)}>
+          <div style={{ ...card, width:480 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'16px 20px', borderBottom: `1px solid ${theme.colors.border}` }}>
+              <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, color: theme.colors.text, margin:0 }}>Importar desde WooCommerce</h3>
+              <button onClick={() => setShowWooModal(false)} style={btn.icon}>✕</button>
+            </div>
+            <div style={{ padding:20 }}>
+              <p style={{ fontSize: theme.font.sizeSm, color: theme.colors.textMuted, marginBottom:16 }}>
+                Crea las credenciales en tu tienda: WooCommerce → Ajustes → Avanzado → REST API (permisos de lectura). Se importan nombre, SKU, precio, stock y categorías (las categorías nuevas se crean solas).
+              </p>
+              <input style={{ ...inputStyle.base, marginBottom:10 }} placeholder="URL de la tienda (ej: https://mitienda.com)" value={woo.url} onChange={e => setWoo({ ...woo, url: e.target.value })} />
+              <div style={{ display:'flex', gap:8, marginBottom:10 }}>
+                <input style={{ ...inputStyle.base, flex:1 }} placeholder="Consumer Key (ck_...)" value={woo.consumer_key} onChange={e => setWoo({ ...woo, consumer_key: e.target.value })} />
+                <input style={{ ...inputStyle.base, flex:1 }} placeholder="Consumer Secret (cs_...)" value={woo.consumer_secret} onChange={e => setWoo({ ...woo, consumer_secret: e.target.value })} />
+              </div>
+              <select style={{ ...inputStyle.base, marginBottom:14 }} value={woo.status} onChange={e => setWoo({ ...woo, status: e.target.value })}>
+                <option value="">Todos los estados</option>
+                <option value="publish">Solo publicados</option>
+                <option value="draft">Solo borradores</option>
+              </select>
+              {wooMsg && (
+                <div style={{
+                  background: wooMsg.startsWith('✓') ? theme.colors.primaryLight : theme.colors.dangerLight,
+                  color: wooMsg.startsWith('✓') ? theme.colors.primaryDark : theme.colors.danger,
+                  padding:'8px 12px', borderRadius: theme.radius.md, marginBottom:12, fontSize: theme.font.sizeSm,
+                }}>{wooMsg}</div>
+              )}
+              <button style={{ ...btn.base, ...btn.primary, width:'100%' }} onClick={handleImportWoo}>{wooMsg === 'Importando...' ? 'Importando...' : 'Importar productos'}</button>
             </div>
           </div>
         </div>

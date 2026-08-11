@@ -1,0 +1,10 @@
+# Nexbit POS web - endurecimiento basico (el resto lo aplica api/index.php)
+Options -Indexes
+
+# App pequena (el JS pesa ~135 KB gzip): sin cache => al subir un archivo
+# nuevo con el mismo nombre, el navegador SIEMPRE toma la version nueva.
+<IfModule mod_headers.c>
+  Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+  Header set Pragma "no-cache"
+  Header set Expires "0"
+</IfModule>

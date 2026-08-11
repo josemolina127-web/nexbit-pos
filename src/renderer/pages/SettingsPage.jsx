@@ -29,8 +29,41 @@ export default function SettingsPage() {
   const [shareOk, setShareOk] = useState(false);
   const [shareErr, setShareErr] = useState('');
   const [appVersion, setAppVersion] = useState('');
+  const [updInfo, setUpdInfo] = useState(null);
+  const [updLoading, setUpdLoading] = useState(false);
+  const [updApplying, setUpdApplying] = useState(false);
+  const [updMsg, setUpdMsg] = useState('');
+  const [updErr, setUpdErr] = useState('');
+  const [updCheckRow, setUpdCheckRow] = useState(false);
   const version = license?.plan || 'basic';
   const isPremium = version === 'pro' || version === 'multi';
+
+  const onUpdateCheck = async () => {
+    setUpdLoading(true); setUpdApplying(false); setUpdMsg(''); setUpdErr(''); setUpdCheckRow(false);
+    try {
+      const info = await window.nexbit.checkUpdate();
+      setUpdInfo(info);
+      if (info.pending) setUpdCheckRow(false);
+      else if (info.configured) setUpdMsg('Estás al día. Última versión publicada: v' + (info.latest ?? 0));
+    } catch (e7) {
+      setUpdErr((e7.message || 'No se pudo consultar actualizaciones') + (e7.message && e7.message.indexOf('github') === -1 ? ' (revisa la configuración github_repo del servidor)' : ''));
+    } finally {
+      setUpdLoading(false);
+    }
+  };
+
+  const onUpdateApply = async () => {
+    setUpdLoading(true); setUpdApplying(true); setUpdMsg(''); setUpdErr('');
+    try {
+      const r = await window.nexbit.applyUpdate();
+      setUpdMsg(`✓ App actualizada a la versión ${r.version} (la base de datos quedó al día automáticamente). Recarga la página con Ctrl+F5.`);
+      setUpdInfo({ ...updInfo, current: r.version, pending: false });
+    } catch (e8) {
+      setUpdErr(e8.message || 'No se pudo aplicar la actualización');
+    } finally {
+      setUpdLoading(false); setUpdApplying(false);
+    }
+  };
 
   useEffect(() => {
     window.nexbit.getAppInfo().then(i => setAppVersion(i?.version || ''));
@@ -448,6 +481,51 @@ if (!r.shareOk) {
         </div>
       </div>
 
+      {window.nexbit.__isWeb && (
+      <div style={{ ...card, padding:20, marginBottom:16 }}>
+        <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>
+          Actualizaciones
+          <span style={{ fontSize:'0.6rem', background: theme.colors.primary, color:'#fff', padding:'2px 8px', borderRadius:10, marginLeft:8, verticalAlign:'middle' }}>WEB</span>
+        </h3>
+        {!updCheckRow && (
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <button disabled={updLoading} onClick={onUpdateCheck} style={{ ...btn.base, ...btn.primary }}>
+              {updLoading ? (updApplying ? 'Actualizando...' : 'Buscando...') : 'Buscar actualizaciones'}
+            </button>
+            <span style={{ fontSize: theme.font.sizeXs, color: theme.colors.textSecondary }}>
+              Versión actual: <b style={{ color: theme.colors.text }}>{updInfo?.current ?? '—'}</b>
+              {updInfo?.latest ? <> · disponible: <b style={{ color: theme.colors.text }}>v{updInfo.latest}</b></> : null}
+            </span>
+          </div>
+        )}
+        {updInfo?.pending && !updCheckRow && (
+          <div style={{ marginTop:12, padding:'12px 14px', background: theme.colors.primaryLight, borderRadius: theme.radius.md }}>
+            <div style={{ fontSize: theme.font.sizeSm, fontWeight:600, color: theme.colors.primary, marginBottom:4 }}>
+              Hay una versión nueva (v{updInfo.latest})
+            </div>
+            <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.textSecondary, marginBottom:10 }}>
+              Al actualizar se aplican los cambios de la app y de la base de datos automáticamente. Se recomienda no realizar ventas durante el proceso.
+            </div>
+            <button
+              disabled={updLoading}
+              onClick={() => { if (window.confirm('¿Actualizar la app a la versión v' + updInfo.latest + '? El proceso tarda unos segundos.')) onUpdateApply(); }}
+              style={{ ...btn.base, ...btn.primary }}
+            >
+              {updLoading ? 'Actualizando...' : `Actualizar ahora (v${updInfo.latest})`}
+            </button>
+          </div>
+        )}
+        {updMsg && <div style={{ color: theme.colors.primary, fontSize: theme.font.sizeXs, marginTop:8 }}>{updMsg}</div>}
+        {updErr && <div style={{ color: theme.colors.danger, fontSize: theme.font.sizeXs, marginTop:8 }}>{updErr}</div>}
+        {updInfo?.configured === false && (
+          <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginTop:8 }}>
+            Actualizaciones desactivadas por el proveedor de esta instalación.
+          </div>
+        )}
+      </div>
+      )}
+
+      {!window.nexbit.__isWeb && (
       <div style={{ ...card, padding:20, marginBottom:16 }}>
         <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>
           Base de Datos (Multi-Cajas)
@@ -507,6 +585,7 @@ if (!r.shareOk) {
           {dbError && <div style={{ color: theme.colors.danger, fontSize: theme.font.sizeXs, marginTop:8 }}>{dbError}</div>}
         </div>
       </div>
+      )}
 
       <div style={{ ...card, padding:20 }}>
         <h3 style={{ fontSize: theme.font.sizeBase, fontWeight:600, marginBottom:16, color: theme.colors.text }}>Información del Sistema</h3>

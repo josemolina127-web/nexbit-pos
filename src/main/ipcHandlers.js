@@ -107,7 +107,19 @@ function registerIpcHandlers() {
         run(`INSERT OR REPLACE INTO permisos_usuario (usuario_id, permiso, valor) VALUES (?, ?, ?)`, [id, permiso, valor ? 1 : 0]);
       }
     }
-    logAudit(currentUser.id, 'actualizar_usuario', `Usuario actualizado ID: ${id}`);
+    logAudit(currentUser.id, 'actualizar_usuario', `Usuario actualizado: #${id}`);
+    return true;
+  });
+
+  ipcMain.handle('auth:deleteUser', (_, id) => {
+    requirePermission('gestionar_usuarios');
+    const target = one(`SELECT nombre_usuario, rol FROM usuarios WHERE id = ?`, [id]);
+    if (!target) throw new Error('Usuario no encontrado');
+    if (target.rol === 'admin') throw new Error('No se puede eliminar un usuario admin');
+    if (currentUser.id === id) throw new Error('No puedes eliminar tu propio usuario');
+    run(`UPDATE sesiones_caja SET activa = 0, fin = CURRENT_TIMESTAMP WHERE usuario_id = ? AND activa = 1`, [id]);
+    run(`UPDATE usuarios SET activo = 0 WHERE id = ?`, [id]);
+    logAudit(currentUser.id, 'eliminar_usuario', `Usuario eliminado (desactivado): ${target.nombre_usuario}`);
     return true;
   });
 

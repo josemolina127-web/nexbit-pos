@@ -21,10 +21,13 @@ export default function UsersPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ nombre_usuario: '', nombre_completo: '', password: '', rol: 'cajero', permisos: {} });
+  const [msg, setMsg] = useState('');
 
   useEffect(() => { load(); }, []);
 
   const load = () => window.nexbit.getUsers().then(setUsers);
+
+  const flash = (m) => { setMsg(m); setTimeout(() => setMsg(''), 3000); };
 
   const handleSubmit = async () => {
     if (editingId) {
@@ -54,6 +57,10 @@ export default function UsersPage() {
         </div>
         <button onClick={() => { setEditingId(null); setForm({ nombre_usuario: '', nombre_completo: '', password: '', rol: 'cajero', permisos: defaultPerms('cajero') }); setShowForm(true); }} style={{ ...btn.base, ...btn.primary }}>+ Nuevo Usuario</button>
       </div>
+
+      {msg && (
+        <div style={{ background: theme.colors.primaryLight, color: theme.colors.primaryDark, padding:'10px 14px', borderRadius: theme.radius.md, marginBottom:16, fontSize: theme.font.sizeSm }}>{msg}</div>
+      )}
 
       {showForm && (
         <div style={{ ...card, padding:20, marginBottom:20 }}>
@@ -95,7 +102,12 @@ export default function UsersPage() {
                 <td style={t.td}><span style={badge(u.rol === 'admin' ? 'danger' : u.rol === 'gerente' ? 'info' : 'success')}>{u.rol}</span></td>
                 <td style={t.td}><span style={{ color: u.activo ? theme.colors.primary : theme.colors.danger, fontWeight:600 }}>{u.activo ? 'Activo' : 'Inactivo'}</span></td>
                 <td style={t.td}>
-                  <button onClick={async () => { const perms = await window.nexbit.getUserPermissionsByUser(u.id); setEditingId(u.id); setForm({ nombre_usuario: u.nombre_usuario, nombre_completo: u.nombre_completo, password: '', rol: u.rol, permisos: perms }); setShowForm(true); }} style={{ ...btn.base, background: theme.colors.infoLight, color: theme.colors.info, padding:'4px 10px', fontSize: theme.font.sizeXs }}>Editar</button>
+                  <div style={{ display:'flex', gap:4 }}>
+                    <button onClick={async () => { const perms = await window.nexbit.getUserPermissionsByUser(u.id); setEditingId(u.id); setForm({ nombre_usuario: u.nombre_usuario, nombre_completo: u.nombre_completo, password: '', rol: u.rol, permisos: perms }); setShowForm(true); }} style={{ ...btn.base, background: theme.colors.infoLight, color: theme.colors.info, padding:'4px 10px', fontSize: theme.font.sizeXs }}>Editar</button>
+                    {u.rol !== 'admin' && (
+                      <button onClick={async () => { if (confirm(`¿Eliminar a "${u.nombre_completo}"? Desaparecerá de la lista y ya no podrá iniciar sesión.`)) { try { await window.nexbit.deleteUser(u.id); load(); flash(`✓ Usuario "${u.nombre_completo}" eliminado`); } catch (e) { alert('Error: ' + e.message); } } }} style={{ ...btn.base, background: theme.colors.dangerLight, color: theme.colors.danger, padding:'4px 10px', fontSize: theme.font.sizeXs }}>Eliminar</button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

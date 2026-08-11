@@ -1,0 +1,11 @@
+const path = require('path');
+const fs = require('fs');
+const Database = require('better-sqlite3');
+const p = 'C:\\NextByte\\nexbit.db';
+const db = new Database(p, { readonly: true });
+const prods = db.prepare('SELECT id, codigo_barras, nombre, created_at FROM productos').all();
+console.log('productos en compartida:', prods);
+const conf = db.prepare("SELECT clave, substr(valor,1,80) v FROM configuracion").all();
+console.log('config compartida:', conf);
+db.close();
+process.exit(0);

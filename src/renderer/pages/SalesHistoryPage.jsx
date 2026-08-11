@@ -75,8 +75,9 @@ export default function SalesHistoryPage() {
     loadSales(); setSelectedSale(null);
   };
 
-  const totalVentas = sales.reduce((s, v) => s + (v.anulada ? 0 : v.total), 0);
-  const totalAnuladas = sales.filter(v => v.anulada).length;
+  const isAnulada = (v) => Number(v.anulada) === 1;
+  const totalVentas = sales.reduce((s, v) => s + (isAnulada(v) ? 0 : v.total), 0);
+  const totalAnuladas = sales.filter(isAnulada).length;
 
   return (
     <div>
@@ -170,7 +171,7 @@ export default function SalesHistoryPage() {
                   <td style={{ ...t.td, fontWeight:600, color: v.anulada ? theme.colors.textMuted : theme.colors.primary }}>${ $clp(v.total) }</td>
                   <td style={t.td}>{v.forma_pago}</td>
                   <td style={t.td}>{v.cliente_nombre || '-'}</td>
-                  <td style={t.td}>{v.anulada ? <span style={badge('danger')}>Anulada</span> : <span style={badge('success')}>Completada</span>}</td>
+                  <td style={t.td}>{isAnulada(v) ? <span style={badge('danger')}>Anulada</span> : <span style={badge('success')}>Completada</span>}</td>
                   <td style={t.td}>
                     {!v.anulada && permissions.anular_ventas && (
                       <button style={{ ...btn.base, background: theme.colors.dangerLight, color: theme.colors.danger, padding:'3px 8px', fontSize: theme.font.sizeXs }} onClick={(e) => { e.stopPropagation(); setVoidDialog({ id: v.id, motivo: '' }); }}>Anular</button>
@@ -194,7 +195,7 @@ export default function SalesHistoryPage() {
               <p style={{ marginBottom:2 }}><strong style={{ color: theme.colors.text }}>Cajero:</strong> {selectedSale.nombre_usuario}</p>
               <p style={{ marginBottom:2 }}><strong style={{ color: theme.colors.text }}>Cliente:</strong> {selectedSale.cliente_nombre || 'Mostrador'}</p>
               <p style={{ marginBottom:2 }}><strong style={{ color: theme.colors.text }}>Pago:</strong> {selectedSale.forma_pago}</p>
-              {selectedSale.anulada && <p><strong style={{ color: theme.colors.danger }}>Anulada:</strong> {selectedSale.motivo_anulacion}</p>}
+              {isAnulada(selectedSale) && <p><strong style={{ color: theme.colors.danger }}>Anulada:</strong> {selectedSale.motivo_anulacion}</p>}
             </div>
             <h4 style={{ fontSize: theme.font.sizeSm, fontWeight:600, marginBottom:8, color: theme.colors.text }}>Productos</h4>
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize: theme.font.sizeSm }}>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { theme, card, btn, input as inputStyle, table as t } from '../styles/theme';
 import { $clp } from '../utils/format';
+import ProductPicker from '../components/ProductPicker';
 
 export default function ProvidersPage() {
   const [providers, setProviders] = useState([]);
@@ -14,6 +15,7 @@ export default function ProvidersPage() {
   const [categories, setCategories] = useState([]);
   const [provProdForm, setProvProdForm] = useState({ nombre: '', codigo_barras: '', categoria_id: '', precio_venta: '', precio_costo: '', stock: '', unidad_medida: 'pieza' });
   const [editingProvProd, setEditingProvProd] = useState(null);
+  const [existingSel, setExistingSel] = useState([]);
 
   const loadAll = () => {
     window.nexbit.getProviders().then(setProviders);
@@ -47,6 +49,7 @@ export default function ProvidersPage() {
     setExpandedProv(id);
     setProvProducts(products.filter(p => p.proveedor_id === id));
     setEditingProvProd(null);
+    setExistingSel([]);
     setProvProdForm({ nombre: '', codigo_barras: '', categoria_id: '', precio_venta: '', precio_costo: '', stock: '', unidad_medida: 'pieza' });
   };
 
@@ -72,6 +75,18 @@ export default function ProvidersPage() {
     const all = await window.nexbit.getProducts({ activo: 1 });
     setProducts(all);
     setProvProducts(all.filter(p => p.proveedor_id === expandedProv));
+  };
+
+  const assignExisting = async () => {
+    for (const p of existingSel) {
+      await window.nexbit.updateProduct(p.id, { codigo_barras: p.codigo_barras, nombre: p.nombre, precio_venta: p.precio_venta, precio_costo: p.precio_costo, stock: p.stock, stock_minimo: p.stock_minimo || 0, categoria_id: p.categoria_id || null, unidad_medida: p.unidad_medida || 'pieza', proveedor_id: expandedProv });
+    }
+    setExistingSel([]);
+    const all = await window.nexbit.getProducts({ activo: 1 });
+    setProducts(all);
+    setProvProducts(all.filter(p => p.proveedor_id === expandedProv));
+    setMsg('✓ ' + existingSel.length + ' producto(s) asignados al proveedor');
+    setTimeout(() => setMsg(''), 2500);
   };
 
   return (
@@ -141,41 +156,50 @@ export default function ProvidersPage() {
                           Productos de {prov.nombre}
                           <span style={{ fontWeight:400, color: theme.colors.textMuted, marginLeft:8, fontSize:'0.7rem' }}>({provProducts.length})</span>
                         </h4>
-                        <div style={{ display:'flex', gap:8, marginBottom:12, alignItems:'end', flexWrap:'wrap' }}>
-                          <div style={{ flex:'1 1 130px', minWidth:110 }}>
+                        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(110px, 1fr))', gap:8, marginBottom:12, alignItems:'end' }}>
+                          <div>
                             <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:2, display:'block' }}>Nuevo producto</label>
                             <input value={provProdForm.nombre} onChange={e => setProvProdForm({...provProdForm, nombre: e.target.value})} style={inputStyle.base} placeholder="Nombre" />
                           </div>
-                          <div style={{ flex:'1 1 90px', minWidth:70 }}>
+                          <div>
                             <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:2, display:'block' }}>Código barras</label>
                             <input value={provProdForm.codigo_barras} onChange={e => setProvProdForm({...provProdForm, codigo_barras: e.target.value})} style={inputStyle.base} placeholder="Opcional" />
                           </div>
-                          <div style={{ flex:'1 1 100px', minWidth:80 }}>
+                          <div>
                             <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:2, display:'block' }}>Categoría</label>
                             <select value={provProdForm.categoria_id} onChange={e => setProvProdForm({...provProdForm, categoria_id: e.target.value})} style={inputStyle.base}>
                               <option value="">Sin categoría</option>
                               {categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                             </select>
                           </div>
-                          <div style={{ flex:'1 1 60px', minWidth:50 }}>
+                          <div>
                             <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:2, display:'block' }}>P. venta</label>
                             <input type="number" value={provProdForm.precio_venta} onChange={e => setProvProdForm({...provProdForm, precio_venta: e.target.value})} style={inputStyle.base} />
                           </div>
-                          <div style={{ flex:'1 1 60px', minWidth:50 }}>
+                          <div>
                             <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:2, display:'block' }}>P. costo</label>
                             <input type="number" value={provProdForm.precio_costo} onChange={e => setProvProdForm({...provProdForm, precio_costo: e.target.value})} style={inputStyle.base} />
                           </div>
-                          <div style={{ flex:'0 1 60px', minWidth:50 }}>
+                          <div>
                             <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:2, display:'block' }}>Unidad</label>
                             <select value={provProdForm.unidad_medida} onChange={e => setProvProdForm({...provProdForm, unidad_medida: e.target.value})} style={inputStyle.base}>
                               <option value="pieza">Unidad</option><option value="kg">Kg</option><option value="litro">Litro</option>
                             </select>
                           </div>
-                          <div style={{ flex:'0 1 50px', minWidth:40 }}>
+                          <div>
                             <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:2, display:'block' }}>Stock</label>
                             <input type="number" value={provProdForm.stock} onChange={e => setProvProdForm({...provProdForm, stock: e.target.value})} style={inputStyle.base} />
                           </div>
-                          <button onClick={addProvProduct} style={{ ...btn.base, ...btn.primary, padding:'8px 14px', whiteSpace:'nowrap', marginBottom:2 }}>+ Agregar</button>
+                          <div style={{ display:'flex', alignItems:'end' }}>
+                            <button onClick={addProvProduct} style={{ ...btn.base, ...btn.primary, padding:'8px 14px', whiteSpace:'nowrap', width:'100%' }}>+ Agregar</button>
+                          </div>
+                        </div>
+                        <div style={{ display:'flex', gap:8, alignItems:'end', marginBottom:12 }}>
+                          <div style={{ flex:1 }}>
+                            <label style={{ fontSize: theme.font.sizeXs, color: theme.colors.textMuted, marginBottom:2, display:'block' }}>Agregar producto existente</label>
+                            <ProductPicker multiple products={products.filter(p => p.activo !== 0)} value={existingSel.map(p => p.id)} onChange={ids => setExistingSel(products.filter(p => ids.includes(p.id)))} excludeIds={provProducts.map(p => p.id)} placeholder="Buscar producto existente..." />
+                          </div>
+                          <button onClick={assignExisting} disabled={!existingSel.length} style={{ ...btn.base, ...btn.secondary, padding:'8px 14px', whiteSpace:'nowrap', marginBottom:2, opacity: existingSel.length ? 1 : 0.5, cursor: existingSel.length ? 'pointer' : 'not-allowed' }}>Asignar al proveedor</button>
                         </div>
                         <div style={t.wrapper}>
                           <table style={{ width:'100%', borderCollapse:'collapse', fontSize: theme.font.sizeSm }}>

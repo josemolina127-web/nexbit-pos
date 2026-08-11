@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { theme, card, btn, input as inputStyle } from '../styles/theme';
 import { $clp } from '../utils/format';
+import ProductPicker from '../components/ProductPicker';
 
 const TABS = [
   { key: 'cupones', label: '🎫 Cupones' },
@@ -34,9 +35,7 @@ export default function PromotionsPage() {
 
   useEffect(() => { load(); }, []);
 
-  const prodFiltered = products.filter(p =>
-    !busqueda || p.nombre?.toLowerCase().includes(busqueda.toLowerCase()) || p.codigo_barras?.includes(busqueda)
-  );
+  const activeProducts = products.filter(p => p.activo !== 0);
 
   const saveCupon = async () => {
     if (!cuponForm.codigo) return;
@@ -161,10 +160,7 @@ export default function PromotionsPage() {
                   </div>
                   {cuponForm.tipo_aplicacion === 'producto' && (
                     <div><label style={{ fontSize: '0.75rem', color: theme.colors.textMuted, display: 'block', marginBottom: 2 }}>Producto</label>
-                      <select style={inputStyle.base} value={cuponForm.producto_id || ''} onChange={e => setCuponForm(f => ({ ...f, producto_id: parseInt(e.target.value) || null }))}>
-                        <option value="">Seleccionar...</option>
-                        {products.filter(p => p.activo !== 0).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                      </select>
+                      <ProductPicker products={activeProducts} value={cuponForm.producto_id || null} onChange={id => setCuponForm(f => ({ ...f, producto_id: id }))} placeholder="Buscar producto..." />
                     </div>
                   )}
                   {cuponForm.tipo_aplicacion === 'categoria' && (
@@ -176,10 +172,8 @@ export default function PromotionsPage() {
                     </div>
                   )}
                   {cuponForm.tipo_aplicacion === 'productos' && (
-                    <div><label style={{ fontSize: '0.75rem', color: theme.colors.textMuted, display: 'block', marginBottom: 2 }}>Productos (ctrl+clic para múltiples)</label>
-                      <select multiple style={{ ...inputStyle.base, height: 120, overflow: 'auto' }} value={cuponForm.productos_ids || []} onChange={e => setCuponForm(f => ({ ...f, productos_ids: Array.from(e.target.selectedOptions, o => parseInt(o.value)) }))}>
-                        {products.filter(p => p.activo !== 0).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                      </select>
+                    <div><label style={{ fontSize: '0.75rem', color: theme.colors.textMuted, display: 'block', marginBottom: 2 }}>Productos incluidos</label>
+                      <ProductPicker multiple products={activeProducts} value={cuponForm.productos_ids || []} onChange={ids => setCuponForm(f => ({ ...f, productos_ids: ids }))} placeholder="Buscar y seleccionar productos..." />
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -231,10 +225,7 @@ export default function PromotionsPage() {
                 <h3 style={{ fontSize: theme.font.sizeBase, fontWeight: 600, color: theme.colors.text, marginBottom: 16 }}>{dcForm.id ? 'Editar' : 'Nuevo'} Descuento por Cantidad</h3>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: '0.75rem', color: theme.colors.textMuted, display: 'block', marginBottom: 2 }}>Producto</label>
-                  <select style={inputStyle.base} value={dcForm.producto_id || ''} onChange={e => setDcForm(f => ({ ...f, producto_id: parseInt(e.target.value) }))}>
-                    <option value="">Seleccionar producto...</option>
-                    {products.filter(p => p.activo !== 0).map(p => <option key={p.id} value={p.id}>{p.nombre} — ${$clp(p.precio_venta)}/ud</option>)}
-                  </select>
+                  <ProductPicker products={activeProducts} value={dcForm.producto_id || null} onChange={id => setDcForm(f => ({ ...f, producto_id: id }))} placeholder="Buscar producto..." />
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: '0.75rem', color: theme.colors.textMuted, display: 'block', marginBottom: 2 }}>Tipo de descuento</label>
@@ -303,16 +294,10 @@ export default function PromotionsPage() {
                 <h3 style={{ fontSize: theme.font.sizeBase, fontWeight: 600, color: theme.colors.text, marginBottom: 16 }}>{promoForm.id ? 'Editar' : 'Nueva'} Promoción</h3>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: '0.75rem', color: theme.colors.textMuted, display: 'block', marginBottom: 2 }}>Producto</label>
-                  <select style={inputStyle.base} value={promoForm.producto_id || ''} onChange={e => {
-                    const pid = parseInt(e.target.value);
-                    const p = products.find(pr => pr.id === pid);
-                    setPromoForm(f => ({ ...f, producto_id: pid || null, nombre: p?.nombre || '', precio_promo: p?.precio_venta || 0 }));
-                  }}>
-                    <option value="">Seleccionar producto...</option>
-                    {products.filter(pr => pr.activo !== 0).map(pr => (
-                      <option key={pr.id} value={pr.id}>{pr.nombre} — ${$clp(pr.precio_venta)}</option>
-                    ))}
-                  </select>
+                  <ProductPicker products={activeProducts} value={promoForm.producto_id || null} onChange={id => {
+                    const p = products.find(pr => pr.id === id);
+                    setPromoForm(f => ({ ...f, producto_id: id, nombre: p?.nombre || '', precio_promo: p?.precio_venta || 0 }));
+                  }} placeholder="Buscar producto..." />
                 </div>
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: '0.75rem', color: theme.colors.textMuted, display: 'block', marginBottom: 2 }}>Precio de promoción</label>
@@ -386,15 +371,13 @@ export default function PromotionsPage() {
                 {(grupoForm.items || []).map((it, i) => (
                   <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
                     <span style={{ fontSize: '0.75rem', color: theme.colors.textMuted, minWidth: 24 }}>#{i + 1}</span>
-                    <select style={{ ...inputStyle.base, flex: 1 }} value={it.producto_id || ''} onChange={e => setGrupoForm(f => {
-                      const items = [...f.items];
-                      const pid = parseInt(e.target.value);
-                      items[i] = { ...items[i], producto_id: pid || null };
-                      return { ...f, items };
-                    })}>
-                      <option value="">Seleccionar producto...</option>
-                      {products.filter(p => p.activo !== 0).map(p => <option key={p.id} value={p.id}>{p.nombre} — ${$clp(p.precio_venta)}</option>)}
-                    </select>
+                    <div style={{ flex: 1 }}>
+                      <ProductPicker products={activeProducts} value={it.producto_id || null} onChange={id => setGrupoForm(f => {
+                        const items = [...f.items];
+                        items[i] = { ...items[i], producto_id: id };
+                        return { ...f, items };
+                      })} placeholder="Buscar producto..." />
+                    </div>
                     <div><span style={{ fontSize: '0.65rem', color: theme.colors.textMuted }}>Cant.</span><input type="number" min="0.001" step="0.001" style={{ ...inputStyle.base, padding: '4px 8px', width: 70 }} value={it.cantidad} onChange={e => setGrupoForm(f => {
                       const items = [...f.items];
                       items[i] = { ...items[i], cantidad: parseFloat(e.target.value) || 0 };

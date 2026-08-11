@@ -6,11 +6,11 @@ import NexbitLogo from './NexbitLogo';
 
 const sideItemStyles = `
   .side-item:not(.side-item--active):hover {
-    background: var(--sidebarHover);
-    color: var(--text);
+    background: var(--sidebarActiveBg);
+    color: var(--sidebarActive);
   }
   .side-item:not(.side-item--active):hover svg {
-    color: var(--text);
+    color: var(--sidebarActive);
   }
 `;
 
@@ -66,6 +66,8 @@ export default function Layout({ children, user, plan, onLogout, cajaName, onCaj
   const { isDark, toggleTheme } = useTheme();
   const isMock = window.nexbit?.__isMock;
   const isAdmin = user?.rol === 'admin';
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('sidebarCollapsed') === '1');
+  const toggleCollapsed = () => setCollapsed(c => { const n = !c; localStorage.setItem('sidebarCollapsed', n ? '1' : '0'); return n; });
 
   const openCajaModal = async () => {
     if (isAdmin) {
@@ -102,20 +104,31 @@ export default function Layout({ children, user, plan, onLogout, cajaName, onCaj
     <div style={{ display:'flex', height:'100vh', background: theme.colors.background, fontFamily: theme.font.sans }}>
       <style>{sideItemStyles}</style>
       <aside style={{
-        width: 220, background: theme.colors.sidebarBg, display:'flex', flexDirection:'column',
-        borderRight: `1px solid ${theme.colors.border}`, flexShrink: 0,
+        width: collapsed ? 64 : 220, background: theme.colors.sidebarBg, display:'flex', flexDirection:'column',
+        borderRight: `1px solid ${theme.colors.border}`, flexShrink: 0, transition:'width 0.2s ease',
         backdropFilter: 'var(--blur)', WebkitBackdropFilter: 'var(--blur)',
       }}>
-        <div style={{ padding:'20px 16px', borderBottom: `1px solid ${theme.colors.border}` }}>
-          <NexbitLogo size={22} />
-          <div style={{ fontSize:'0.6rem', color: theme.colors.sidebarText, marginTop:4, letterSpacing:'0.05em' }}>PUNTO DE VENTA</div>
+        <div style={{ padding: collapsed ? '14px 8px' : '14px 16px', borderBottom: `1px solid ${theme.colors.border}` }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:6 }}>
+            <NexbitLogo size={24} collapsed={collapsed} />
+            <button onClick={toggleCollapsed} title={collapsed ? 'Expandir menú' : 'Colapsar menú'} style={{
+              padding:'6px 8px', borderRadius: theme.radius.md, background: theme.colors.surfaceHover,
+              border:'none', color: theme.colors.textSecondary, cursor:'pointer', fontSize:'0.8rem',
+              transition:'all 0.15s',
+            }}>{collapsed ? '▶' : '◀'}</button>
+          </div>
+          {!collapsed && (
+            <div style={{ fontSize:'0.6rem', color: theme.colors.sidebarText, marginTop:4, letterSpacing:'0.05em' }}>PUNTO DE VENTA</div>
+          )}
         </div>
         <nav style={{ flex:1, overflowY:'auto', padding:'8px 0' }}>
           {visibleItems.map(item => (
-            <NavLink key={item.path} to={item.path} end={item.path === '/'} style={{ textDecoration:'none', color:'inherit' }}>
+            <NavLink key={item.path} to={item.path} end={item.path === '/'} title={collapsed ? item.label : undefined} style={{ textDecoration:'none', color:'inherit' }}>
               {({ isActive }) => (
                 <div className={'side-item' + (isActive ? ' side-item--active' : '')} style={{
-                  display:'flex', alignItems:'center', gap:10, padding:'10px 16px',
+                  display:'flex', alignItems:'center', gap:10,
+                  padding: collapsed ? '10px 0' : '10px 16px',
+                  justifyContent: collapsed ? 'center' : 'flex-start',
                   margin:'1px 8px', borderRadius: theme.radius.md,
                   color: isActive ? theme.colors.sidebarActive : theme.colors.sidebarText,
                   background: isActive ? theme.colors.sidebarActiveBg : 'transparent',
@@ -124,8 +137,8 @@ export default function Layout({ children, user, plan, onLogout, cajaName, onCaj
                   cursor:'pointer',
                 }}>
                   <span style={{ width:20, textAlign:'center', color: isActive ? theme.colors.sidebarActive : theme.colors.sidebarText, lineHeight:0 }}>{item.icon}</span>
-                  <span>{item.label}</span>
-                  {['/usuarios', '/auditoria', '/promociones'].includes(item.path) && plan !== 'pro' && plan !== 'multi' && (
+                  {!collapsed && <span>{item.label}</span>}
+                  {!collapsed && ['/usuarios', '/auditoria', '/promociones'].includes(item.path) && plan !== 'pro' && plan !== 'multi' && (
                     <span style={{ marginLeft:'auto', fontSize:'0.55rem', fontWeight:700, padding:'2px 6px', borderRadius: theme.radius.full, background: theme.colors.primary, color:'#fff', letterSpacing:'0.04em' }}>PRO</span>
                   )}
                 </div>
@@ -134,32 +147,50 @@ export default function Layout({ children, user, plan, onLogout, cajaName, onCaj
           ))}
         </nav>
         <div style={{
-          padding:'14px 16px', borderTop: `1px solid ${theme.colors.border}`,
-          display:'flex', alignItems:'center', justifyContent:'space-between',
+          padding: collapsed ? '12px 0' : '14px 16px', borderTop: `1px solid ${theme.colors.border}`,
+          display:'flex', alignItems:'center',
+          ...(collapsed ? { flexDirection:'column', gap:6 } : { justifyContent:'space-between' }),
         }}>
-          <div>
-            <div style={{ fontSize: theme.font.sizeSm, color: theme.colors.text, fontWeight:500 }}>{user?.nombre_completo}</div>
-            <span style={badge(user?.rol === 'admin' ? 'warning' : user?.rol === 'gerente' ? 'info' : 'default')}>
-              {user?.rol}
-            </span>
-            {cajaName === 'Sin caja' ? (
-              <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.warning, marginTop:2, cursor:'pointer' }} onClick={openCajaModal}>➕ Seleccionar caja</div>
-            ) : cajaName && (
-              <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.sidebarActive, marginTop:2 }}>📍 {cajaName}</div>
-            )}
-          </div>
-          <div style={{ display:'flex', gap:4 }}>
-            <button onClick={toggleTheme} title={isDark ? 'Modo claro' : 'Modo oscuro'} style={{
-              padding:'6px 8px', borderRadius: theme.radius.md, background: theme.colors.surfaceHover,
-              border:'none', color: theme.colors.textSecondary, cursor:'pointer', fontSize:'0.85rem',
-              transition:'all 0.15s',
-            }}>{isDark ? '☀️' : '🌙'}</button>
-            <button onClick={onLogout} style={{
-              padding:'6px 10px', borderRadius: theme.radius.md, background: theme.colors.surfaceHover,
-              border:'none', color: theme.colors.textSecondary, cursor:'pointer', fontSize:'0.75rem',
-              transition:'all 0.15s',
-            }}>Salir</button>
-          </div>
+          {collapsed ? (
+            <>
+              <button onClick={toggleTheme} title={isDark ? 'Modo claro' : 'Modo oscuro'} style={{
+                padding:'6px 8px', borderRadius: theme.radius.md, background: theme.colors.surfaceHover,
+                border:'none', color: theme.colors.textSecondary, cursor:'pointer', fontSize:'0.85rem',
+                transition:'all 0.15s',
+              }}>{isDark ? '☀️' : '🌙'}</button>
+              <button onClick={onLogout} title="Salir" style={{
+                padding:'6px 8px', borderRadius: theme.radius.md, background: theme.colors.surfaceHover,
+                border:'none', color: theme.colors.textSecondary, cursor:'pointer', fontSize:'0.8rem',
+                transition:'all 0.15s',
+              }}>⏻</button>
+            </>
+          ) : (
+            <>
+              <div>
+                <div style={{ fontSize: theme.font.sizeSm, color: theme.colors.text, fontWeight:500 }}>{user?.nombre_completo}</div>
+                <span style={badge(user?.rol === 'admin' ? 'warning' : user?.rol === 'gerente' ? 'info' : 'default')}>
+                  {user?.rol}
+                </span>
+                {cajaName === 'Sin caja' ? (
+                  <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.warning, marginTop:2, cursor:'pointer' }} onClick={openCajaModal}>➕ Seleccionar caja</div>
+                ) : cajaName && (
+                  <div style={{ fontSize: theme.font.sizeXs, color: theme.colors.sidebarActive, marginTop:2 }}>📍 {cajaName}</div>
+                )}
+              </div>
+              <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+                <button onClick={toggleTheme} title={isDark ? 'Modo claro' : 'Modo oscuro'} style={{
+                  padding:'6px 8px', borderRadius: theme.radius.md, background: theme.colors.surfaceHover,
+                  border:'none', color: theme.colors.textSecondary, cursor:'pointer', fontSize:'0.85rem',
+                  transition:'all 0.15s',
+                }}>{isDark ? '☀️' : '🌙'}</button>
+                <button onClick={onLogout} style={{
+                  padding:'6px 10px', borderRadius: theme.radius.md, background: theme.colors.surfaceHover,
+                  border:'none', color: theme.colors.textSecondary, cursor:'pointer', fontSize:'0.75rem',
+                  transition:'all 0.15s',
+                }}>Salir</button>
+              </div>
+            </>
+          )}
         </div>
       </aside>
 

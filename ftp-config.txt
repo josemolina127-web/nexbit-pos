@@ -1,0 +1,7 @@
+# Datos FTP de cPanel para subir.bat (NO subas este archivo al servidor)
+# En cPanel: "FTP Accounts" (> Crear cuenta FTP) o usa el usuario principal.
+# RUTA = carpeta donde esta la app, normalmente /public_html
+HOST=ftp.tudominio.cl
+USER=usuario_ftp
+PASS=tu_clave_ftp
+RUTA=/public_html
