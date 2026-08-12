@@ -15,6 +15,7 @@ function db() {
 function dbAsegurarTabla($pdo) {
   $pdo->exec("CREATE TABLE IF NOT EXISTS pedidos (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    woo_order_id INT NULL,
     flow_token VARCHAR(80) NULL,
     flow_order VARCHAR(40) NULL,
     cliente_nombre VARCHAR(120) NOT NULL,

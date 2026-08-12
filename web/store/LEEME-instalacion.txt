@@ -1,9 +1,9 @@
 LEEME - INSTALACION DE LA TIENDA (Nexbit POS web)
 =================================================
-(v1 - Flow.cl + correo SMTP)
+(v2 - WooCommerce + licencias automaticas por correo)
 
-La carpeta "tienda" es la pagina publica donde tus clientes eligen plan,
-pagan con Flow y reciben la licencia por correo automaticamente.
+La carpeta "tienda" recibe los pedidos pagados de tu tienda WooCommerce,
+genera la licencia Nexbit POS y la envia al cliente por correo.
 
 ------------------------------------------------------------
 PASO 1 - Base de datos (cPanel)
@@ -11,92 +11,90 @@ PASO 1 - Base de datos (cPanel)
 - cPanel > "Bases de datos MySQL" > crear BD:  nexbit_tienda
 - Crear usuario BD (ej: nexbit_tienda_user) con contrasena fuerte.
 - Asignar el usuario a la BD con "TODOS los privilegios".
-- Las tablas se crean solas la primera vez que se usa la tienda.
+- Las tablas se crean solas la primera vez que se usa.
 
 ------------------------------------------------------------
 PASO 2 - Subir los archivos (cPanel)
 ------------------------------------------------------------
-- Correo? No. Usa cPanel > Administrador de archivos (File Manager).
+- cPanel > Administrador de archivos (File Manager).
 - Ve a public_html > crea la carpeta "tienda".
-- Sube AHÍ el contenido de la carpeta web/store del proyecto
-  (index.php, pagar.php, webhook.php, resultado.php, admin.php,
-  simular.php, store-funciones.php, lib_*.php, store-config.example.php).
+- Sube ahi el contenido de web/store del proyecto:
+  woo-webhook.php, store-funciones.php, lib_*.php, store-config.example.php,
+  admin.php, index.php, pagar.php, webhook.php, resultado.php, simular.php.
 - Renombra store-config.example.php a store-config.php.
 
-Opcional (recomendado): PHPMailer para el envio de correo con SMTP.
-- Descarga https://github.com/PHPMailer/PHPMailer (boton Code > Download ZIP)
+Opcional (recomendado): PHPMailer para envio con SMTP.
+- Descarga https://github.com/PHPMailer/PHPMailer (Code > Download ZIP)
 - Descomprime y sube la carpeta a public_html/tienda/PHPMailer/
-  (la tienda lo usa automaticamente si esta ahi; si no, usa SMTP nativo o mail().
+  (la tienda lo usa automaticamente; si no, usa SMTP nativo o mail()).
 
 ------------------------------------------------------------
-PASO 3 - Datos de Flow (sandbox primero)
+PASO 3 - WooCommerce: crear el webhook
 ------------------------------------------------------------
-- Entra a https://sandbox.flow.cl con tu cuenta.
-- Crea un "Comercio" del tipo "Pago API / Link de pago" (ve a
-  "Comercios" > "Crear comercio"). El nombre no importa, es la prueba.
-- En el comercio creado vas a "API" (o "Configuracion > API"):
-  copia el CLIENT SECRET o API KEY y SECRET KEY (Flow los llama
-  "apiKey" y "secretKey" de ese comercio).
-- Edita tu sitio: tienda/store-config.php:
-      'SANDBOX' => true,
-      'FLOW_API_KEY' => 'tu apiKey del sandbox',
-      'FLOW_SECRET_KEY' => 'tu secretKey del sandbox',
-      'FLOW_URL_RETORNO' => 'https://TUDOMINIO.cl/tienda/resultado.php',
-      'FLOW_URL_CONFIRMACION' => 'https://TUDOMINIO.cl/tienda/webhook.php',
-  (los precios y el secreto de licencias tambien estan en este archivo)
-- OJO: las URL de retorno/confirmacion se mandan en cada pago, no hace
-  falta configurarlas en el panel de Flow.
+En tu tienda WooCommerce:
+- WooCommerce > Ajustes > Avanzado > Webhooks > Anadir webhook:
+      Nombre:           Nexbit POS licencias
+      Estado:           Activo
+      Topic:            Order updated (pedido actualizado)
+      URL de entrega:   https://TUDOMINIO.cl/tienda/woo-webhook.php
+      Secret de entrega: (palabra clave fuerte, la misma que en store-config.php)
+- Guarda. Woo genera un pedido de ejemplo; "Enviar datos de prueba"
+  dispara una entrega de prueba (el pedido de ejemplo no tiene tus
+  productos: el webhook respondera "ningun producto del pedido es un
+  plan", es lo normal en esa prueba).
+
+En la tienda/store-config.php:
+      'WOO_WEBHOOK_SECRET' => 'la misma palabra clave del webhook',
+      'WOO_PRODUCTOS' => [
+          123 => ['multi', 4, 10],   // ID del producto Woo "Plan Multi" -> [plan, cajas, usuarios]
+          124 => ['basic', 1, 1],
+      ],
+  (el ID del producto lo ves en WooCommerce > Productos (columna ID);
+   solo se procesan pedidos que incluyan productos de este mapa)
 
 ------------------------------------------------------------
 PASO 4 - Correo (cPanel)
 ------------------------------------------------------------
 - cPanel > "Cuentas de correo" > crea licencias@TUDOMINIO.cl
-- En la tienda/store-config.php:
+- En store-config.php:
       'MAIL_FROM' => 'licencias@TUDOMINIO.cl',
       'SMTP_HOST' => 'mail.tudominio.cl',
-      'SMTP_PORT' => 465,          (587 con STARTTLS si tu hosting lo exige)
+      'SMTP_PORT' => 465,          (587 + STARTTLS si tu hosting lo exige)
       'SMTP_USER' => 'licencias@TUDOMINIO.cl',
       'SMTP_PASS' => 'la contrasena del correo',
-- Problemas de entrega: revisa la carpeta Spam del cliente. Si usas
-  SMTP correcto y SPF/DKIM del cPanel, suele llegar bien.
+- Si el correo cae en Spam, revisa SPF/DKIM en tu cPanel.
 
 ------------------------------------------------------------
-PASO 5 - Probar (sandbox)
+PASO 5 - Probar
 ------------------------------------------------------------
-- Abre  https://TUDOMINIO.cl/tienda/   y compra el plan multi.
-- Te redirige a una pagina de pago DE SANDBOX. Usa la tarjeta de prueba:
-      Numero:  4051 8856 0044 6623   (Visa de prueba)
-      Vencimiento: cualquier fecha futura   CVV: cualquiera
-- En el sandbox de Flow: "Pagos recibidos" > "Simular" > "Aprobar".
-- Al aprobarse, el sandbox dispara el webhook a TU servidor y tu
-  recibes el correo con la licencia.
-- Revisa el resultado por si acaso en:  https://TUDOMINIO.cl/tienda/admin.php
-  (la clave es ADMIN_CLAVE del store-config.php; ahi puedes reenviar
-   la licencia de un pedido pagado).
-- Puedes probar SIN Flow con el simulador: crea el pedido desde admin
-  o directamente en la BD, y abre
-      https://TUDOMINIO.cl/tienda/simular.php?id=1
-  (esto solo funciona con HABILITAR_SIMULADOR=true; en produccion
-  ponlo en false).
+- Prueba real: compra el producto en tu tienda con el gateway en modo
+  prueba (o un pedido pequeno) y deja el pedido en "processing"/"completado".
+- El webhook procesa solo pedidos pagados (processing o completed) y
+  genera + envia la licencia UNA sola vez (repeticiones no duplican).
+- Alternativa SIN Woo: simular.php?id=N marca un pedido como pagado
+  (solo con HABILITAR_SIMULADOR=true en store-config.php).
+- Resultados en: https://TUDOMINIO.cl/tienda/admin.php (clave ADMIN_CLAVE).
+  Ahi puedes reenviar la licencia de un pedido ya pagado.
 
 ------------------------------------------------------------
-PASO 6 - Pasar a produccion
+PASO 6 - Produccion
 ------------------------------------------------------------
-- Crea el comercio REAL en https://www.flow.cl (tu cuenta real).
-- Copia sus apiKey/secretKey reales y pon en store-config.php:
-      'SANDBOX' => false,
-  y las URL con tu dominio real (igual que en el sandbox).
-- Pon  'HABILITAR_SIMULADOR' => false
-- Cambia 'ADMIN_CLAVE' por una clave larga.
-- (Opcional) En cPanel: "Proteger carpetas" sobre /tienda/admin.php
-  o protege toda la carpeta public_html/tienda-admin.
+- 'HABILITAR_SIMULADOR' => false
+- 'ADMIN_CLAVE' => una clave larga
+
+------------------------------------------------------------
+FLUJO ALTERNATIVO - Tienda propia con Flow (sin WooCommerce)
+------------------------------------------------------------
+Si alguna vez quieres vender desde una pagina tuya sin WooCommerce:
+- index.php (planes) + pagar.php (pago Flow) + webhook.php + resultado.php
+- Crea comercio en https://sandbox.flow.cl (pruebas) o www.flow.cl (real),
+  pon apiKey/secretKey en store-config.php y SANDBOX true/false.
 
 ------------------------------------------------------------
 SEGURIDAD - importante
 ------------------------------------------------------------
-- store-config.php contiene tus claves de Flow y SMTP: NO lo subas
-  a GitHub (ya esta en .gitignore) ni lo conserves en sitios publicos.
-- El secreto LICENSE_SECRET viaja en el codigo que reciben todos los
-  clientes (api/index.php). La tienda lo usa para generar licencias
-  automaticamente. Es el diseno actual del producto; si quieres pasarlo
-  a firma asimetrica (mas seguro), avisame y lo migramos.
+- store-config.php contiene claves (Woo, SMTP, Flow): NO lo subas a GitHub
+  (ya esta en .gitignore).
+- El secreto LICENSE_SECRET viaja en el codigo de todos los clientes
+  (api/index.php). La tienda lo usa para generar licencias. Si quieres
+  firma asimetrica (mas segura), avisame y lo migramos.

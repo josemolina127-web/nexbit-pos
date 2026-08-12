@@ -19,6 +19,15 @@ return [
   // Secreto de firmado de licencias (debe coincidir con el de web/api/index.php)
   'LICENSE_SECRET' => 'nxb7Hq3mP9xL2vRs',
 
+  // ---- WooCommerce (tu tienda): webhook de pedidos pagados ----
+  // WOO_WEBHOOK_SECRET: la palabra clave que pones en el webhook de Woo.
+  // WOO_PRODUCTOS: mapa producto de Woo => [plan, max_cajas, max_usuarios].
+  //   (el numero es el ID del producto en tu tienda WooCommerce)
+  'WOO_WEBHOOK_SECRET' => 'pon-una-palabra-clave-fuerte',
+  'WOO_PRODUCTOS' => [
+    // 123 => ['multi', 4, 10],
+  ],
+
   // BD de la tienda (crear BD y usuario en cPanel, luego poner los datos aqui)
   'DB_HOST' => 'localhost',
   'DB_NAME' => 'nexbit_tienda',
