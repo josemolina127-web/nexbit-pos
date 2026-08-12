@@ -24,6 +24,7 @@ function npl_instalar() {
     cliente_nombre VARCHAR(120) NOT NULL,
     cliente_email VARCHAR(120) NOT NULL,
     plan VARCHAR(20) NOT NULL,
+    tipo VARCHAR(10) NOT NULL DEFAULT 'anual',
     max_cajas INT NOT NULL,
     max_usuarios INT NOT NULL,
     monto DECIMAL(12,2) NOT NULL,
@@ -35,14 +36,35 @@ function npl_instalar() {
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 }
 
+// ---- migra una tabla creada por una version anterior (agrega columnas que falten) ----
+add_action('admin_init', 'npl_migrar');
+function npl_migrar() {
+  global $wpdb;
+  $tabla = $wpdb->prefix . NPL_TABLA;
+  $col = $wpdb->get_var("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '$tabla' AND COLUMN_NAME = 'tipo'");
+  if (!$col) $wpdb->query("ALTER TABLE `$tabla` ADD COLUMN tipo VARCHAR(10) NOT NULL DEFAULT 'anual' AFTER plan");
+}
+
 // ---- config (opciones de WordPress; las editas en el menu del plugin) ----
 function npl_opciones() {
   $def = [
     'license_secret' => 'nxb7Hq3mP9xL2vRs',
-    'productos_map' => '',
+    'productos' => [],
     'mail_from' => '',
   ];
   return wp_parse_args(get_option('npl_config', []), $def);
+}
+
+// ---- las 6 licencias (clave => [nombre, plan, cajas, usuarios, vigencia]) ----
+function npl_productos() {
+  return [
+    'basico_anual' => ['Básico anual', 'basic', 1, 1, 'anual'],
+    'basico_vida'  => ['Básico de por vida', 'basic', 1, 1, 'vitalicia'],
+    'pro_anual'    => ['Pro anual', 'pro', 2, 5, 'anual'],
+    'pro_vida'     => ['Pro de por vida', 'pro', 2, 5, 'vitalicia'],
+    'multi_anual'  => ['Multi caja anual', 'multi', 4, 10, 'anual'],
+    'multi_vida'   => ['Multi caja de por vida', 'multi', 4, 10, 'vitalicia'],
+  ];
 }
 
 // ---- generacion de licencia (misma firma que web/tools/gen-license.js) ----
@@ -51,28 +73,31 @@ function npl_generar_licencia($plan, $cajas, $usuarios, $cliente, $secret) {
   return $payload . ':' . substr(hash_hmac('sha256', $payload, $secret), 0, 12);
 }
 
-// ---- mapeo de productos: "123 => multi:4:10" por linea ----
+// ---- busca a que licencia pertenece un ID de producto de WooCommerce ----
 function npl_plan_de_producto($product_id, $config) {
-  foreach (preg_split('/\r?\n/', $config['productos_map'] ?? '') as $linea) {
-    if (!preg_match('/^\s*(\d+)\s*=>\s*(\w+)\s*:\s*(\d+)\s*:\s*(\d+)\s*$/', $linea, $m)) continue;
-    if ((int)$m[1] === (int)$product_id) return [$m[2], (int)$m[3], (int)$m[4]];
+  $ids = $config['productos'] ?? [];
+  foreach (npl_productos() as $tipo => $info) {
+    if (!empty($ids[$tipo]) && (int)$ids[$tipo] === (int)$product_id) {
+      return [$info[1], $info[2], $info[3], $info[4]];
+    }
   }
   return null;
 }
 
 // ---- correo de la licencia (wp_mail: usa el SMTP de tu WordPress) ----
-function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios) {
+function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, $tipo) {
+  $vigencia = $tipo === 'vitalicia' ? 'De por vida' : 'Anual (renovable)';
   $asunto = 'Tu licencia Nexbit POS';
   $html = '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;border:1px solid #eee;border-radius:12px;overflow:hidden">
     <div style="background:#1c1c1e;color:#fff;padding:20px 24px"><b style="color:#FF4B00">Nexbit</b> POS · Licencia</div>
     <div style="padding:24px">
     <p>Hola ' . esc_html($nombre) . ', gracias por tu compra. Tu licencia de Nexbit POS:</p>
     <p style="background:#f6f6f7;border:1px dashed #ccc;border-radius:8px;padding:14px;font-family:monospace;font-size:14px">' . esc_html($licencia) . '</p>
-    <p><b>Plan:</b> ' . esc_html($plan) . ' · ' . (int)$cajas . ' cajas · ' . (int)$usuarios . ' usuarios</p>
+    <p><b>Plan:</b> ' . esc_html($plan) . ' · ' . (int)$cajas . ' cajas · ' . (int)$usuarios . ' usuarios · ' . esc_html($vigencia) . '</p>
     <p><b>Cómo activar:</b> pega el código en el paso "Licencia" del instalador web, o en Config → Licencia en la app de escritorio.</p>
     <p style="color:#777;font-size:12px">Nexbit POS — punto de venta para tu negocio.</p>
     </div></div>';
-  $texto = "Hola $nombre, tu licencia Nexbit POS: $licencia\nPlan: $plan ($cajas cajas, $usuarios usuarios).\nPega el codigo en el paso Licencia del instalador.";
+  $texto = "Hola $nombre, tu licencia Nexbit POS: $licencia\nPlan: $plan ($cajas cajas, $usuarios usuarios) - $vigencia.\nPega el codigo en el paso Licencia del instalador.";
   $headers = ['Content-Type: text/html; charset=UTF-8'];
   $cfg = npl_opciones();
   if (!empty($cfg['mail_from'])) $headers[] = 'From: ' . $cfg['mail_from'];
@@ -104,13 +129,14 @@ function npl_procesar_pedido($order_id) {
     return;
   }
 
-  list($planCode, $cajas, $usuarios) = $plan;
+  list($planCode, $cajas, $usuarios, $tipo) = $plan;
   $lic = npl_generar_licencia($planCode, $cajas, $usuarios, strtoupper(str_replace(' ', '_', $nombre)), $config['license_secret']);
   $wpdb->insert($tabla, [
     'woo_order_id' => (int)$order_id,
     'cliente_nombre' => $nombre,
     'cliente_email' => $email,
     'plan' => $planCode,
+    'tipo' => $tipo,
     'max_cajas' => $cajas,
     'max_usuarios' => $usuarios,
     'monto' => $order->get_total(),
@@ -120,7 +146,7 @@ function npl_procesar_pedido($order_id) {
     'fecha_pagado' => current_time('mysql'),
   ]);
 
-  if (!npl_enviar_correo($email, $nombre, $lic, $planCode, $cajas, $usuarios)) {
+  if (!npl_enviar_correo($email, $nombre, $lic, $planCode, $cajas, $usuarios, $tipo)) {
     // el correo fallo: se marca en el historial para reenviar desde el admin
     $wpdb->update($tabla, ['estado' => 'correo_fallo'], ['id' => $wpdb->insert_id]);
   }
@@ -134,7 +160,7 @@ function npl_reenviar($id) {
   $tabla = $wpdb->prefix . NPL_TABLA;
   $p = $wpdb->get_row($wpdb->prepare("SELECT * FROM `$tabla` WHERE id = %d", (int)$id));
   if (!$p || empty($p->licencia)) return 'Pedido no encontrado o sin licencia';
-  $ok = npl_enviar_correo($p->cliente_email, $p->cliente_nombre, $p->licencia, $p->plan, $p->max_cajas, $p->max_usuarios);
+  $ok = npl_enviar_correo($p->cliente_email, $p->cliente_nombre, $p->licencia, $p->plan, $p->max_cajas, $p->max_usuarios, $p->tipo);
   $wpdb->update($tabla, ['estado' => $ok ? 'pagado' : 'correo_fallo'], ['id' => (int)$id]);
   return $ok ? 'Licencia reenviada a ' . $p->cliente_email : 'El correo fallo de nuevo';
 }
@@ -166,7 +192,7 @@ function npl_pagina_historial() {
       <button class="button">Buscar</button>
     </form>
     <table class="widefat striped">
-      <thead><tr><th>#</th><th>Pedido Woo</th><th>Cliente</th><th>Email</th><th>Plan</th><th>Monto</th><th>Estado</th><th>Licencia</th><th>Pagado</th><th></th></tr></thead>
+      <thead><tr><th>#</th><th>Pedido Woo</th><th>Cliente</th><th>Email</th><th>Plan</th><th>Vigencia</th><th>Monto</th><th>Estado</th><th>Licencia</th><th>Pagado</th><th></th></tr></thead>
       <tbody>
       <?php foreach ($rows as $p): ?>
         <tr>
@@ -175,6 +201,7 @@ function npl_pagina_historial() {
           <td><?php echo esc_html($p->cliente_nombre); ?></td>
           <td><?php echo esc_html($p->cliente_email); ?></td>
           <td><?php echo esc_html($p->plan . ' (' . (int)$p->max_cajas . '/' . (int)$p->max_usuarios . ')'); ?></td>
+          <td><?php echo $p->tipo === 'vitalicia' ? '<span style="color:#1a7f37">De por vida</span>' : 'Anual'; ?></td>
           <td>$<?php echo number_format((float)$p->monto, 0, ',', '.'); ?></td>
           <td><?php echo esc_html($p->estado); ?></td>
           <td><code><?php echo esc_html($p->licencia); ?></code></td>
@@ -182,7 +209,7 @@ function npl_pagina_historial() {
           <td><a class="button button-small" href="<?php echo wp_nonce_url(admin_url('admin.php?page=nexbit-licencias&reenviar=' . (int)$p->id), 'npl_reenviar_' . (int)$p->id); ?>">Reenviar licencia</a></td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$rows): ?><tr><td colspan="10">Sin pedidos todavía. Cuando un pedido de WooCommerce con un producto Nexbit quede pagado, aparece aquí.</td></tr><?php endif; ?>
+      <?php if (!$rows): ?><tr><td colspan="11">Sin pedidos todavía. Cuando un pedido de WooCommerce con un producto Nexbit quede pagado, aparece aquí.</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>
@@ -193,9 +220,13 @@ function npl_pagina_config() {
   if (!current_user_can('manage_options')) wp_die('Sin permisos');
   if (isset($_POST['guardar'])) {
     check_admin_referer('npl_config');
+    $productos = [];
+    foreach (array_keys(npl_productos()) as $tipo) {
+      $productos[$tipo] = absint($_POST['productos'][$tipo] ?? 0);
+    }
     update_option('npl_config', [
       'license_secret' => sanitize_text_field(wp_unslash($_POST['license_secret'] ?? '')),
-      'productos_map' => sanitize_textarea_field(wp_unslash($_POST['productos_map'] ?? '')),
+      'productos' => $productos,
       'mail_from' => sanitize_email(wp_unslash($_POST['mail_from'] ?? '')),
     ]);
     echo '<div class="notice notice-success is-dismissible"><p>Configuración guardada.</p></div>';
@@ -208,12 +239,20 @@ function npl_pagina_config() {
       <?php wp_nonce_field('npl_config'); ?>
       <table class="form-table">
         <tr>
-          <th><label>Productos de licencias</label></th>
+          <th><label>Licencias y sus productos</label></th>
           <td>
-            <textarea name="productos_map" rows="6" style="width:100%;max-width:480px;font-family:monospace"><?php echo esc_textarea($c['productos_map']); ?></textarea>
-            <p class="description">Una línea por producto: <code>ID_DEL_PRODUCTO =&gt; plan:cajas:usuarios</code><br>
-            Ej: <code>123 =&gt; multi:4:10</code> · <code>124 =&gt; basic:1:1</code> · <code>125 =&gt; pro:2:5</code><br>
-            El ID lo ves en WooCommerce → Productos (columna ID).</p>
+            <p class="description" style="margin-top:0">Escribe el ID de cada producto de tu tienda (WooCommerce → Productos → columna ID). Los que dejes en 0 quedan desactivados.</p>
+            <table class="widefat striped" style="max-width:560px">
+              <thead><tr><th>Licencia</th><th style="width:140px">ID del producto</th></tr></thead>
+              <tbody>
+              <?php foreach (npl_productos() as $tipo => $info): ?>
+                <tr>
+                  <td><strong><?php echo esc_html($info[0]); ?></strong><br><span style="color:#777"><?php echo esc_html($info[1] . ' · ' . (int)$info[2] . ' cajas · ' . (int)$info[3] . ' usuarios · ' . ($info[4] === 'vitalicia' ? 'de por vida' : 'anual')); ?></span></td>
+                  <td><input type="number" name="productos[<?php echo esc_attr($tipo); ?>]" value="<?php echo (int)($c['productos'][$tipo] ?? 0); ?>" style="width:100%"></td>
+                </tr>
+              <?php endforeach; ?>
+              </tbody>
+            </table>
           </td>
         </tr>
         <tr>
