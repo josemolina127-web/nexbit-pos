@@ -51,6 +51,7 @@ function npl_opciones() {
     'license_secret' => 'nxb7Hq3mP9xL2vRs',
     'productos' => [],
     'mail_from' => '',
+    'exe_archivo' => '',
   ];
   return wp_parse_args(get_option('npl_config', []), $def);
 }
@@ -85,6 +86,7 @@ function npl_plan_de_producto($product_id, $config) {
 }
 
 // ---- correo de la licencia (wp_mail: usa el SMTP de tu WordPress) ----
+// Para basic/pro adjunta el instalador (.exe) si existe en la carpeta del plugin; si el adjunto es demasiado grande para el servidor, reintenta sin el.
 function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, $tipo) {
   $vigencia = $tipo === 'vitalicia' ? 'De por vida' : 'Anual (renovable)';
   $asunto = 'Tu licencia Nexbit POS';
@@ -97,11 +99,21 @@ function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, 
     <p><b>Cómo activar:</b> pega el código en el paso "Licencia" del instalador web, o en Config → Licencia en la app de escritorio.</p>
     <p style="color:#777;font-size:12px">Nexbit POS — punto de venta para tu negocio.</p>
     </div></div>';
-  $texto = "Hola $nombre, tu licencia Nexbit POS: $licencia\nPlan: $plan ($cajas cajas, $usuarios usuarios) - $vigencia.\nPega el codigo en el paso Licencia del instalador.";
   $headers = ['Content-Type: text/html; charset=UTF-8'];
   $cfg = npl_opciones();
   if (!empty($cfg['mail_from'])) $headers[] = 'From: ' . $cfg['mail_from'];
-  return wp_mail($para, $asunto, $html, $headers, $texto !== '' ? [$texto] : []);
+
+  $adjunto = '';
+  if ($plan !== 'multi' && !empty($cfg['exe_archivo'])) {
+    $ruta = dirname(__FILE__) . '/' . basename($cfg['exe_archivo']);
+    if (is_file($ruta)) $adjunto = $ruta;
+  }
+  if ($adjunto !== '') {
+    $ok = wp_mail($para, $asunto, $html, $headers, [$adjunto]);
+    if (!$ok) $ok = wp_mail($para, $asunto, $html, $headers, []);
+    return $ok;
+  }
+  return wp_mail($para, $asunto, $html, $headers, []);
 }
 
 // ---- procesa un pedido pagado (se llama desde WooCommerce; idempotente) ----
@@ -163,6 +175,19 @@ function npl_reenviar($id) {
   $ok = npl_enviar_correo($p->cliente_email, $p->cliente_nombre, $p->licencia, $p->plan, $p->max_cajas, $p->max_usuarios, $p->tipo);
   $wpdb->update($tabla, ['estado' => $ok ? 'pagado' : 'correo_fallo'], ['id' => (int)$id]);
   return $ok ? 'Licencia reenviada a ' . $p->cliente_email : 'El correo fallo de nuevo';
+}
+
+// ---- muestra la licencia al cliente en "Mi cuenta" → detalle del pedido ----
+add_action('woocommerce_order_details_after_order_table', 'npl_licencia_en_mi_cuenta');
+function npl_licencia_en_mi_cuenta($order) {
+  global $wpdb;
+  $tabla = $wpdb->prefix . NPL_TABLA;
+  $p = $wpdb->get_row($wpdb->prepare("SELECT * FROM `$tabla` WHERE woo_order_id = %d", (int)$order->get_id()));
+  if (!$p || empty($p->licencia)) return;
+  $vigencia = $p->tipo === 'vitalicia' ? 'De por vida' : 'Anual (renovable)';
+  echo '<h2 style="margin-top:40px">Tu licencia Nexbit POS</h2>
+    <p style="background:#f6f6f7;border:1px dashed #ccc;border-radius:8px;padding:14px;font-family:monospace;font-size:14px;max-width:480px">' . esc_html($p->licencia) . '</p>
+    <p style="color:#777">Plan ' . esc_html($p->plan) . ' · ' . (int)$p->max_cajas . ' cajas · ' . (int)$p->max_usuarios . ' usuarios · ' . esc_html($vigencia) . '</p>';
 }
 
 // ---- menu de administracion: historial + config ----
@@ -228,6 +253,7 @@ function npl_pagina_config() {
       'license_secret' => sanitize_text_field(wp_unslash($_POST['license_secret'] ?? '')),
       'productos' => $productos,
       'mail_from' => sanitize_email(wp_unslash($_POST['mail_from'] ?? '')),
+      'exe_archivo' => sanitize_file_name(wp_unslash($_POST['exe_archivo'] ?? '')),
     ]);
     echo '<div class="notice notice-success is-dismissible"><p>Configuración guardada.</p></div>';
   }
@@ -262,6 +288,14 @@ function npl_pagina_config() {
         <tr>
           <th><label>Correo remitente</label></th>
           <td><input name="mail_from" value="<?php echo esc_attr($c['mail_from']); ?>" style="width:320px" class="regular-text"><p class="description">Opcional. Si lo dejas vacío usa el correo del sitio. Los envíos usan wp_mail (SMTP de tu WordPress).</p></td>
+        </tr>
+        <tr>
+          <th><label>Instalador para adjuntar</label></th>
+          <td>
+            <input name="exe_archivo" value="<?php echo esc_attr($c['exe_archivo']); ?>" style="width:320px" class="regular-text" placeholder="nexbit-pos-setup.exe">
+            <p class="description">Nombre del .exe que adjuntarás en el correo de Básico y Pro (los Multi no lo llevan). Debe estar subido en la carpeta del plugin: <code>wp-content/plugins/nexbit-pos-licencias/</code><br>
+            <b>Ojo:</b> si el .exe pesa más de ~20 MB muchos servidores de hosting no lo envían (el correo falla y el pedido queda marcado <code>correo_fallo</code> para reenviarlo). Si pesa más, lo recomendable es marcarlo como "Producto descargable" en WooCommerce (se envía un enlace de descarga y aparece en Mi Cuenta → Descargas) y dejar este campo vacío.</p>
+          </td>
         </tr>
       </table>
       <button class="button button-primary" name="guardar" value="1">Guardar</button>
