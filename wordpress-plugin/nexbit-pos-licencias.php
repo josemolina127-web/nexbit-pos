@@ -177,6 +177,12 @@ function npl_reenviar($id) {
   return $ok ? 'Licencia reenviada a ' . $p->cliente_email : 'El correo fallo de nuevo';
 }
 
+// ---- permite .exe como archivo descargable de WooCommerce ----
+add_filter('woocommerce_downloadable_file_types', function ($tipos) {
+  $tipos['exe'] = 'application/octet-stream';
+  return $tipos;
+});
+
 // ---- muestra la licencia al cliente en "Mi cuenta" → detalle del pedido ----
 add_action('woocommerce_order_details_after_order_table', 'npl_licencia_en_mi_cuenta');
 function npl_licencia_en_mi_cuenta($order) {
