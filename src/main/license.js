@@ -27,7 +27,7 @@ function parseCode(code) {
 }
 
 function limitsFor(plan) {
-  if (plan === 'pro') return { max_cajas: 1, max_usuarios: 2 };
+  if (plan === 'pro') return { max_cajas: 1, max_usuarios: 1 };
   if (plan === 'multi') return { max_cajas: 4, max_usuarios: 4 };
   return { max_cajas: 1, max_usuarios: 1 };
 }

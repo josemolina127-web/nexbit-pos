@@ -12,7 +12,7 @@ return [
   // Planes: [max_cajas, max_usuarios, precio CLP, descripcion]
   'PLANES' => [
     'basic' => [1, 1, 29990, '1 caja · 1 usuario'],
-    'pro' => [2, 5, 59990, '2 cajas · 5 usuarios'],
+    'pro' => [1, 1, 59990, '1 caja · 1 usuario'],
     'multi' => [4, 10, 89990, '4 cajas · 10 usuarios'],
   ],
 
