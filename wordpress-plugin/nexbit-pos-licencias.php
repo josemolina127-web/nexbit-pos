@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Nexbit POS - Licencias
  * Description: Genera y envia automaticamente la licencia Nexbit POS cuando un pedido de WooCommerce queda pagado. Incluye historial de pedidos con sus licencias.
- * Version: 1.0.8
+ * Version: 1.0.9
  * Author: Nexbit
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('NPL_VERSION', '1.0.8');
+define('NPL_VERSION', '1.0.9');
 define('NPL_TABLA', 'nexbit_pedidos');
 
 // ---- activacion: crea la tabla de pedidos (una sola, dentro de la BD de WordPress) ----
@@ -192,19 +192,25 @@ add_filter('woocommerce_downloadable_file_types', function ($tipos) {
   return $tipos;
 });
 
-// ---- incluye licencia + instructivo dentro de los correos que envía WooCommerce al cliente ----
-add_action('woocommerce_email_after_order_table', 'npl_licencia_en_correo_woo', 10, 4);
-function npl_licencia_en_correo_woo($order, $sent_to_admin, $plain_text, $email) {
-  if ($sent_to_admin) return;
+// ---- inyecta licencia + instructivo en los correos de WooCommerce (sin depender de plantillas) ----
+$GLOBALS['npl_orden_correo'] = null;
+foreach (['customer_processing_order', 'customer_completed_order', 'customer_shipped_order', 'customer_on_hold_order', 'customer_refunded_order', 'customer_invoice', 'customer_note'] as $npl_tipo_email) {
+  add_filter("woocommerce_email_recipient_{$npl_tipo_email}", function ($recipient, $order, $email) {
+    if ($order instanceof WC_Order && $email->is_customer_email()) $GLOBALS['npl_orden_correo'] = $order;
+    return $recipient;
+  }, 10, 3);
+}
+add_filter('woocommerce_mail_content', 'npl_licencia_en_correo_woo');
+function npl_licencia_en_correo_woo($html) {
+  $order = $GLOBALS['npl_orden_correo'] ?? null;
+  if (!$order) return $html;
   global $wpdb;
   $tabla = $wpdb->prefix . NPL_TABLA;
   $p = $wpdb->get_row($wpdb->prepare("SELECT * FROM `$tabla` WHERE woo_order_id = %d", (int)$order->get_id()));
-  if (!$p || empty($p->licencia)) return;
+  if (!$p || empty($p->licencia)) return $html;
   $vigencia = $p->tipo === 'vitalicia' ? 'De por vida' : 'Anual (renovable)';
-  if ($plain_text) {
-    echo "\nTU LICENCIA NEXBIT POS: " . $p->licencia . "\nPlan " . $p->plan . ' (' . (int)$p->max_cajas . ' cajas, ' . (int)$p->max_usuarios . " usuarios) - " . $vigencia . "\nCOMO ACTIVAR: descomprime el ZIP del instalador, ejecuta Nexbit-POS-Setup.exe, instala, abre Nexbit POS, ve a Config -> Licencia, pega tu codigo y pulsa Activar.\n";
-  } else {
-    echo '<h2 style="color:#96588a;display:block;font-family:inherit;font-size:22px;font-weight:bold;margin:40px 0 10px">Tu licencia Nexbit POS</h2>
+  if (stripos($html, '</body>') !== false) {
+    $bloque = '<h2 style="color:#96588a;font-family:inherit;font-size:22px;font-weight:bold;margin:40px 0 10px">Tu licencia Nexbit POS</h2>
       <p style="background:#f6f6f7;border:1px dashed #ccc;border-radius:8px;padding:14px;font-family:monospace;font-size:14px">' . esc_html($p->licencia) . '</p>
       <p>Plan ' . esc_html($p->plan) . ' · ' . (int)$p->max_cajas . ' cajas · ' . (int)$p->max_usuarios . ' usuarios · ' . esc_html($vigencia) . '</p>
       <h3 style="font-family:inherit;font-size:16px">Cómo instalar y activar</h3>
@@ -215,7 +221,9 @@ function npl_licencia_en_correo_woo($order, $sent_to_admin, $plain_text, $email)
         <li>Pega el código de arriba y pulsa <b>Activar</b>.</li>
       </ol>
       <p>El mismo código también está siempre disponible en <b>Mi Cuenta → Pedidos</b> (ver pedido).</p>';
+    return str_ireplace('</body>', $bloque . '</body>', $html);
   }
+  return $html . "\n\nTU LICENCIA NEXBIT POS: " . $p->licencia . "\nPlan " . $p->plan . ' (' . (int)$p->max_cajas . ' cajas, ' . (int)$p->max_usuarios . " usuarios) - " . $vigencia . "\nCOMO ACTIVAR: descomprime el ZIP del instalador, ejecuta Nexbit-POS-Setup.exe, instala, abre Nexbit POS, ve a Config -> Licencia, pega tu codigo y pulsa Activar.\n";
 }
 
 // ---- muestra la licencia al cliente en "Mi cuenta" → detalle del pedido ----
