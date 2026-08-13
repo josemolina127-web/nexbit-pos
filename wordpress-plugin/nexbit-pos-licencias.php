@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Nexbit POS - Licencias
  * Description: Genera y envia automaticamente la licencia Nexbit POS cuando un pedido de WooCommerce queda pagado. Incluye historial de pedidos con sus licencias.
- * Version: 1.0.7
+ * Version: 1.0.11
  * Author: Nexbit
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('NPL_VERSION', '1.0.7');
+define('NPL_VERSION', '1.0.11');
 define('NPL_TABLA', 'nexbit_pedidos');
 
 // ---- activacion: crea la tabla de pedidos (una sola, dentro de la BD de WordPress) ----
@@ -85,42 +85,46 @@ function npl_plan_de_producto($product_id, $config) {
   return null;
 }
 
-// ---- correo de la licencia (wp_mail: usa el SMTP de tu WordPress) ----
-// Para basic/pro adjunta el instalador (.exe) si existe en la carpeta del plugin; si el adjunto es demasiado grande para el servidor, reintenta sin el.
+// ---- correo de la licencia (wp_mail: usa el correo de tu WordPress) ----
+// Para basic/pro adjunta el instalador (.exe) solo si es pequeno (los adjuntos grandes matan el envio por memoria); si falla, reintenta sin el.
 function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, $tipo) {
-  $vigencia = $tipo === 'vitalicia' ? 'De por vida' : 'Anual (renovable)';
-  $asunto = 'Tu licencia Nexbit POS';
-  $html = '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;border:1px solid #eee;border-radius:12px;overflow:hidden">
-    <div style="background:#1c1c1e;color:#fff;padding:20px 24px"><b style="color:#FF4B00">Nexbit</b> POS ┬À Licencia</div>
-    <div style="padding:24px">
-    <p>Hola ' . esc_html($nombre) . ', gracias por tu compra. Tu licencia de Nexbit POS:</p>
-    <p style="background:#f6f6f7;border:1px dashed #ccc;border-radius:8px;padding:14px;font-family:monospace;font-size:14px">' . esc_html($licencia) . '</p>
-    <p><b>Plan:</b> ' . esc_html($plan) . ' ┬À ' . (int)$cajas . ' cajas ┬À ' . (int)$usuarios . ' usuarios ┬À ' . esc_html($vigencia) . '</p>
-    <p><b>C├│mo instalar y activar tu licencia:</b></p>
-    <ol style="padding-left:20px;line-height:1.8">
-    <li>Descarga el instalador desde el enlace del correo de "pedido completado" o en <b>Mi Cuenta ÔåÆ Descargas</b> (el archivo viene comprimido en ZIP: descompr├¡melo y ejecuta <b>Nexbit-POS-Setup.exe</b>).</li>
-    <li>Instala y abre <b>Nexbit POS</b>.</li>
-    <li>Ve a <b>Config ÔåÆ Licencia</b> (en la instalaci├│n web: paso "Licencia" del instalador).</li>
-    <li>Pega el c├│digo de abajo y pulsa <b>Activar</b>.</li>
-    </ol>
-    <p>El mismo c├│digo lo tienes siempre en <b>Mi Cuenta ÔåÆ Pedidos</b> (ver pedido) para volver a activarlo si cambias de equipo.</p>
-    <p style="color:#777;font-size:12px">Nexbit POS ÔÇö punto de venta para tu negocio.</p>
-    </div></div>';
-  $headers = ['Content-Type: text/html; charset=UTF-8'];
-  $cfg = npl_opciones();
-  if (!empty($cfg['mail_from'])) $headers[] = 'From: ' . $cfg['mail_from'];
+  try {
+    $vigencia = $tipo === 'vitalicia' ? 'De por vida' : 'Anual (renovable)';
+    $asunto = 'Tu licencia Nexbit POS';
+    $html = '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;border:1px solid #eee;border-radius:12px;overflow:hidden">
+      <div style="background:#1c1c1e;color:#fff;padding:20px 24px"><b style="color:#FF4B00">Nexbit</b> POS · Licencia</div>
+      <div style="padding:24px">
+      <p>Hola ' . esc_html($nombre) . ', gracias por tu compra. Tu licencia de Nexbit POS:</p>
+      <p style="background:#f6f6f7;border:1px dashed #ccc;border-radius:8px;padding:14px;font-family:monospace;font-size:14px">' . esc_html($licencia) . '</p>
+      <p><b>Plan:</b> ' . esc_html($plan) . ' · ' . (int)$cajas . ' cajas · ' . (int)$usuarios . ' usuarios · ' . esc_html($vigencia) . '</p>
+      <p><b>Cómo instalar y activar tu licencia:</b></p>
+      <ol style="padding-left:20px;line-height:1.8">
+      <li>Descarga el instalador desde el enlace del correo de "pedido completado" o en <b>Mi Cuenta → Descargas</b> (el archivo viene comprimido en ZIP: descomprímelo y ejecuta <b>Nexbit-POS-Setup.exe</b>).</li>
+      <li>Instala y abre <b>Nexbit POS</b>.</li>
+      <li>Ve a <b>Config → Licencia</b> (en la instalación web: paso "Licencia" del instalador).</li>
+      <li>Pega el código de abajo y pulsa <b>Activar</b>.</li>
+      </ol>
+      <p>El mismo código lo tienes siempre en <b>Mi Cuenta → Pedidos</b> (ver pedido) para volver a activarlo si cambias de equipo.</p>
+      <p style="color:#777;font-size:12px">Nexbit POS — punto de venta para tu negocio.</p>
+      </div></div>';
+    $headers = ['Content-Type: text/html; charset=UTF-8'];
+    $cfg = npl_opciones();
+    if (!empty($cfg['mail_from'])) $headers[] = 'From: ' . $cfg['mail_from'];
 
-  $adjunto = '';
-  if ($plan !== 'multi' && !empty($cfg['exe_archivo'])) {
-    $ruta = dirname(__FILE__) . '/' . basename($cfg['exe_archivo']);
-    if (is_file($ruta)) $adjunto = $ruta;
+    $adjunto = '';
+    if ($plan !== 'multi' && !empty($cfg['exe_archivo'])) {
+      $ruta = dirname(__FILE__) . '/' . basename($cfg['exe_archivo']);
+      if (is_file($ruta) && filesize($ruta) <= 15 * 1024 * 1024) $adjunto = $ruta;
+    }
+    if ($adjunto !== '') {
+      $ok = wp_mail($para, $asunto, $html, $headers, [$adjunto]);
+      if (!$ok) $ok = wp_mail($para, $asunto, $html, $headers, []);
+      return $ok;
+    }
+    return wp_mail($para, $asunto, $html, $headers, []);
+} catch (Throwable $e) {
+    return false; // que un adjunto o un fallo nunca reviente la pagina
   }
-  if ($adjunto !== '') {
-    $ok = wp_mail($para, $asunto, $html, $headers, [$adjunto]);
-    if (!$ok) $ok = wp_mail($para, $asunto, $html, $headers, []);
-    return $ok;
-  }
-  return wp_mail($para, $asunto, $html, $headers, []);
 }
 
 // ---- procesa un pedido pagado (se llama desde WooCommerce; idempotente) ----
