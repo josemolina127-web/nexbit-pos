@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Nexbit POS - Licencias
  * Description: Genera y envia automaticamente la licencia Nexbit POS cuando un pedido de WooCommerce queda pagado. Incluye historial de pedidos con sus licencias.
- * Version: 1.0.7
+ * Version: 1.0.8
  * Author: Nexbit
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('NPL_VERSION', '1.0.7');
+define('NPL_VERSION', '1.0.8');
 define('NPL_TABLA', 'nexbit_pedidos');
 
 // ---- activacion: crea la tabla de pedidos (una sola, dentro de la BD de WordPress) ----
@@ -170,8 +170,10 @@ function npl_procesar_pedido($order_id) {
     $wpdb->update($tabla, ['estado' => 'correo_fallo'], ['id' => $wpdb->insert_id]);
   }
 }
-add_action('woocommerce_payment_complete', 'npl_procesar_pedido', 20);
-add_action('woocommerce_order_status_completed', 'npl_procesar_pedido', 20);
+// prioridad 1: el plugin guarda la licencia ANTES de que WooCommerce arme los correos (que van con prioridad 10)
+add_action('woocommerce_payment_complete', 'npl_procesar_pedido', 1);
+add_action('woocommerce_order_status_processing', 'npl_procesar_pedido', 1);
+add_action('woocommerce_order_status_completed', 'npl_procesar_pedido', 1);
 
 // ---- reenvio manual de licencia desde el historial ----
 function npl_reenviar($id) {
