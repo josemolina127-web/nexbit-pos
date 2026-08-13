@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Nexbit POS - Licencias
  * Description: Genera y envia automaticamente la licencia Nexbit POS cuando un pedido de WooCommerce queda pagado. Incluye historial de pedidos con sus licencias.
- * Version: 1.0.6
+ * Version: 1.0.7
  * Author: Nexbit
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('NPL_VERSION', '1.0.6');
+define('NPL_VERSION', '1.0.7');
 define('NPL_TABLA', 'nexbit_pedidos');
 
 // ---- activacion: crea la tabla de pedidos (una sola, dentro de la BD de WordPress) ----
@@ -52,11 +52,6 @@ function npl_opciones() {
     'productos' => [],
     'mail_from' => '',
     'exe_archivo' => '',
-    'smtp_host' => '',
-    'smtp_port' => 465,
-    'smtp_cifrado' => 'ssl',
-    'smtp_usuario' => '',
-    'smtp_clave' => '',
   ];
   return wp_parse_args(get_option('npl_config', []), $def);
 }
@@ -126,23 +121,6 @@ function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, 
     return $ok;
   }
   return wp_mail($para, $asunto, $html, $headers, []);
-}
-
-// ---- envia todo el correo de WordPress por SMTP (PHPMailer ya viene con WordPress) ----
-add_action('phpmailer_init', 'npl_smtp');
-function npl_smtp($pm) {
-  $cfg = npl_opciones();
-  if (empty($cfg['smtp_host']) || empty($cfg['smtp_usuario'])) return;
-  $pm->isSMTP();
-  $pm->Host = $cfg['smtp_host'];
-  $pm->Port = (int)($cfg['smtp_port'] ?: 465);
-  $pm->SMTPAuth = true;
-  $pm->Username = $cfg['smtp_usuario'];
-  $pm->Password = $cfg['smtp_clave'];
-  $pm->SMTPSecure = in_array($cfg['smtp_cifrado'], ['ssl', 'tls']) ? $cfg['smtp_cifrado'] : '';
-  $from = $cfg['mail_from'] !== '' ? $cfg['mail_from'] : $cfg['smtp_usuario'];
-  if ($from) $pm->From = $from;
-  $pm->FromName = 'Nexbit POS';
 }
 
 // ---- procesa un pedido pagado (se llama desde WooCommerce; idempotente) ----
@@ -305,7 +283,7 @@ function npl_pagina_historial() {
 function npl_pagina_config() {
   if (!current_user_can('manage_options')) wp_die('Sin permisos');
   $c = npl_opciones();
-  if (isset($_POST['guardar']) || isset($_POST['probar'])) {
+  if (isset($_POST['guardar'])) {
     check_admin_referer('npl_config');
     $productos = [];
     foreach (array_keys(npl_productos()) as $tipo) {
@@ -316,23 +294,11 @@ function npl_pagina_config() {
       'productos' => $productos,
       'mail_from' => sanitize_email(wp_unslash($_POST['mail_from'] ?? '')),
       'exe_archivo' => sanitize_file_name(wp_unslash($_POST['exe_archivo'] ?? '')),
-      'smtp_host' => sanitize_text_field(wp_unslash($_POST['smtp_host'] ?? '')),
-      'smtp_port' => absint($_POST['smtp_port'] ?? 465),
-      'smtp_cifrado' => in_array($_POST['smtp_cifrado'] ?? '', ['ssl', 'tls', 'ninguno']) ? ($_POST['smtp_cifrado'] == 'ninguno' ? '' : $_POST['smtp_cifrado']) : 'ssl',
-      'smtp_usuario' => sanitize_email(wp_unslash($_POST['smtp_usuario'] ?? '')),
-      'smtp_clave' => sanitize_text_field(wp_unslash($_POST['smtp_clave'] ?? '')),
     ]);
     // los hostings con caché de objetos siguen leyendo el valor viejo: se la purgo
     if (function_exists('wp_cache_delete')) wp_cache_delete('npl_config', 'options');
     $c = npl_opciones();
     echo '<div class="notice notice-success is-dismissible"><p>Configuración guardada ' . ($guardado ? '(cambios aplicados)' : '(los valores no cambiaron o ya estaban así)') . '.</p></div>';
-    if (isset($_POST['probar'])) {
-      $destino = $c['smtp_usuario'] !== '' ? $c['smtp_usuario'] : get_option('admin_email');
-      $ok = wp_mail($destino, 'Prueba de correo Nexbit POS', '<p>Si recibes esto, el SMTP quedó bien configurado.</p>', ['Content-Type: text/html; charset=UTF-8']);
-      $detalle = '';
-      if (!$ok && !empty($GLOBALS['phpmailer']->ErrorInfo)) $detalle = ' <br>Detalle: ' . esc_html($GLOBALS['phpmailer']->ErrorInfo);
-      echo '<div class="notice ' . ($ok ? 'notice-success' : 'notice-error') . ' is-dismissible"><p>' . ($ok ? 'Correo de prueba enviado a ' . esc_html($destino) : 'El correo de prueba FALLÓ (destino: ' . esc_html($destino) . '). Revisa servidor, puerto, cifrado, usuario y contraseña.') . $detalle . '</p></div>';
-    }
   }
   ?>
   <div class="wrap">
@@ -354,30 +320,7 @@ function npl_pagina_config() {
                 </tr>
               <?php endforeach; ?>
               </tbody>
-<tr>
-          <th><label>Correo SMTP (recomendado)</label></th>
-          <td>
-            <table class="widefat striped" style="max-width:560px">
-              <tr><td style="width:160px">Servidor SMTP</td><td><input name="smtp_host" value="<?php echo esc_attr($c['smtp_host']); ?>" style="width:100%" placeholder="mail.atga.cl"></td></tr>
-              <tr><td>Puerto</td><td><input name="smtp_port" type="number" value="<?php echo (int)$c['smtp_port']; ?>" style="width:100%" placeholder="465"></td></tr>
-              <tr><td>Cifrado</td><td><select name="smtp_cifrado" style="width:100%">
-                <option value="ssl" <?php selected($c['smtp_cifrado'], 'ssl'); ?>>SSL (puerto 465)</option>
-                <option value="tls" <?php selected($c['smtp_cifrado'], 'tls'); ?>>TLS (puerto 587)</option>
-                <option value="ninguno" <?php selected($c['smtp_cifrado'], ''); ?>>Sin cifrado (25)</option>
-              </select></td></tr>
-              <tr><td>Usuario</td><td><input name="smtp_usuario" value="<?php echo esc_attr($c['smtp_usuario']); ?>" style="width:100%" placeholder="licencias@atga.cl"></td></tr>
-              <tr><td>Contraseña</td><td><input name="smtp_clave" type="password" value="<?php echo esc_attr($c['smtp_clave']); ?>" style="width:100%"></td></tr>
             </table>
-            <p class="description">Sacá estos datos de cPanel → <b>Email Accounts</b> → botón <b>"Configurar cliente"</b> de tu buzón (o "Configuración manual"). Con esto, <b>todos</b> los correos de WordPress (los de WooCommerce incluidos) salen por tu buzón real y llegan.<br>
-            Si dejas el servidor vacío, se sigue usando mail() de PHP (el que falla).</p>
-          </td>
-        </tr>
-        <tr>
-          <th><label>Probar correo</label></th>
-          <td><button class="button" name="probar" value="1">Guardar y enviar correo de prueba</button>
-            <p class="description">Manda un correo de prueba a tu buzón SMTP (<b><?php echo esc_html($c['smtp_usuario'] !== '' ? $c['smtp_usuario'] : get_option('admin_email')); ?></b>) para que puedas verlo llegar. Revísalo en tu Webmail (cPanel → Webmail → Roundcube). Si falla, abajo muestra el detalle del error.</p></td>
-        </tr>
-      </table>
           </td>
         </tr>
         <tr>
@@ -386,7 +329,7 @@ function npl_pagina_config() {
         </tr>
         <tr>
           <th><label>Correo remitente</label></th>
-          <td><input name="mail_from" value="<?php echo esc_attr($c['mail_from']); ?>" style="width:320px" class="regular-text"><p class="description">Opcional. Si lo dejas vacío usa el correo del sitio. Los envíos usan wp_mail (SMTP de tu WordPress).</p></td>
+          <td><input name="mail_from" value="<?php echo esc_attr($c['mail_from']); ?>" style="width:320px" class="regular-text"><p class="description">Opcional. Si lo dejas vacío usa el correo del sitio. Los envíos usan wp_mail (el correo de tu WordPress).</p></td>
         </tr>
         <tr>
           <th><label>Instalador para adjuntar</label></th>
