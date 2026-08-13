@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Nexbit POS - Licencias
  * Description: Genera y envia automaticamente la licencia Nexbit POS cuando un pedido de WooCommerce queda pagado. Incluye historial de pedidos con sus licencias.
- * Version: 1.0.5
+ * Version: 1.0.6
  * Author: Nexbit
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('NPL_VERSION', '1.0.5');
+define('NPL_VERSION', '1.0.6');
 define('NPL_TABLA', 'nexbit_pedidos');
 
 // ---- activacion: crea la tabla de pedidos (una sola, dentro de la BD de WordPress) ----
@@ -212,20 +212,29 @@ add_filter('woocommerce_downloadable_file_types', function ($tipos) {
   return $tipos;
 });
 
-// ---- incluye la licencia dentro de los correos que envía WooCommerce al cliente ----
+// ---- incluye licencia + instructivo dentro de los correos que envía WooCommerce al cliente ----
 add_action('woocommerce_email_after_order_table', 'npl_licencia_en_correo_woo', 10, 4);
 function npl_licencia_en_correo_woo($order, $sent_to_admin, $plain_text, $email) {
+  if ($sent_to_admin) return;
   global $wpdb;
   $tabla = $wpdb->prefix . NPL_TABLA;
   $p = $wpdb->get_row($wpdb->prepare("SELECT * FROM `$tabla` WHERE woo_order_id = %d", (int)$order->get_id()));
   if (!$p || empty($p->licencia)) return;
   $vigencia = $p->tipo === 'vitalicia' ? 'De por vida' : 'Anual (renovable)';
   if ($plain_text) {
-    echo "\nTU LICENCIA NEXBIT POS:\n" . $p->licencia . "\nPlan " . $p->plan . ' (' . (int)$p->max_cajas . ' cajas, ' . (int)$p->max_usuarios . " usuarios) - " . $vigencia . "\n";
+    echo "\nTU LICENCIA NEXBIT POS: " . $p->licencia . "\nPlan " . $p->plan . ' (' . (int)$p->max_cajas . ' cajas, ' . (int)$p->max_usuarios . " usuarios) - " . $vigencia . "\nCOMO ACTIVAR: descomprime el ZIP del instalador, ejecuta Nexbit-POS-Setup.exe, instala, abre Nexbit POS, ve a Config -> Licencia, pega tu codigo y pulsa Activar.\n";
   } else {
     echo '<h2 style="color:#96588a;display:block;font-family:inherit;font-size:22px;font-weight:bold;margin:40px 0 10px">Tu licencia Nexbit POS</h2>
       <p style="background:#f6f6f7;border:1px dashed #ccc;border-radius:8px;padding:14px;font-family:monospace;font-size:14px">' . esc_html($p->licencia) . '</p>
-      <p>Plan ' . esc_html($p->plan) . ' · ' . (int)$p->max_cajas . ' cajas · ' . (int)$p->max_usuarios . ' usuarios · ' . esc_html($vigencia) . '</p>';
+      <p>Plan ' . esc_html($p->plan) . ' · ' . (int)$p->max_cajas . ' cajas · ' . (int)$p->max_usuarios . ' usuarios · ' . esc_html($vigencia) . '</p>
+      <h3 style="font-family:inherit;font-size:16px">Cómo instalar y activar</h3>
+      <ol style="line-height:1.7">
+        <li>Descarga el instalador desde el botón de descarga de este mismo correo (archivo ZIP: descomprímelo y ejecuta <b>Nexbit-POS-Setup.exe</b>).</li>
+        <li>Instala y abre <b>Nexbit POS</b>.</li>
+        <li>Ve a <b>Config → Licencia</b> (en la instalación web: paso "Licencia" del instalador).</li>
+        <li>Pega el código de arriba y pulsa <b>Activar</b>.</li>
+      </ol>
+      <p>El mismo código también está siempre disponible en <b>Mi Cuenta → Pedidos</b> (ver pedido).</p>';
   }
 }
 
