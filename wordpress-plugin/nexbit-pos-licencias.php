@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Nexbit POS - Licencias
  * Description: Genera y envia automaticamente la licencia Nexbit POS cuando un pedido de WooCommerce queda pagado. Incluye historial de pedidos con sus licencias.
- * Version: 1.0.15
+ * Version: 1.0.16
  * Author: Nexbit
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('NPL_VERSION', '1.0.15');
+define('NPL_VERSION', '1.0.16');
 define('NPL_TABLA', 'nexbit_pedidos');
 
 // ---- activacion: crea la tabla de pedidos (una sola, dentro de la BD de WordPress) ----
@@ -93,6 +93,7 @@ function npl_plan_de_producto($product_id, $config) {
 // Para basic/pro adjunta el instalador (.exe) solo si es pequeno (los adjuntos grandes matan el envio por memoria); si falla, reintenta sin el.
 function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, $tipo) {
   try {
+    $cfg = npl_opciones();
     $vigencia = $tipo === 'vitalicia' ? 'De por vida' : 'Anual (renovable)';
     $asunto = 'Tu licencia Nexbit POS';
     $html = '<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;border:1px solid #eee;border-radius:12px;overflow:hidden">
@@ -117,7 +118,6 @@ function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, 
       <p style="color:#777;font-size:12px">Nexbit POS — punto de venta para tu negocio.</p>
       </div></div>';
     $headers = ['Content-Type: text/html; charset=UTF-8'];
-    $cfg = npl_opciones();
     if (!empty($cfg['mail_from'])) {
       $nombre = trim(strip_tags(str_replace(['<', '>'], '', $cfg['mail_from_nombre'] ?? '')));
       $headers[] = $nombre !== '' ? 'From: ' . $nombre . ' <' . $cfg['mail_from'] . '>' : 'From: ' . $cfg['mail_from'];
