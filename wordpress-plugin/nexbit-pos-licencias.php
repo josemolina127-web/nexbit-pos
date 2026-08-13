@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Nexbit POS - Licencias
  * Description: Genera y envia automaticamente la licencia Nexbit POS cuando un pedido de WooCommerce queda pagado. Incluye historial de pedidos con sus licencias.
- * Version: 1.0.13
+ * Version: 1.0.14
  * Author: Nexbit
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('NPL_VERSION', '1.0.13');
+define('NPL_VERSION', '1.0.14');
 define('NPL_TABLA', 'nexbit_pedidos');
 
 // ---- activacion: crea la tabla de pedidos (una sola, dentro de la BD de WordPress) ----
@@ -53,6 +53,8 @@ function npl_opciones() {
     'mail_from' => '',
     'mail_from_nombre' => '',
     'exe_archivo' => '',
+    'descarga_instalador' => 'https://pos.atga.cl/wp-content/uploads/woocommerce_uploads/2026/08/Nexbit-POS-Setup-1.1.18-r7quvx.zip',
+    'descarga_manual' => 'https://pos.atga.cl/wp-content/uploads/2026/08/manual.pdf',
   ];
   return wp_parse_args(get_option('npl_config', []), $def);
 }
@@ -98,9 +100,14 @@ function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, 
       <p>Hola ' . esc_html($nombre) . ', gracias por tu compra. Tu licencia de Nexbit POS:</p>
       <p style="background:#f6f6f7;border:1px dashed #ccc;border-radius:8px;padding:14px;font-family:monospace;font-size:14px">' . esc_html($licencia) . '</p>
       <p><b>Plan:</b> ' . esc_html($plan) . ' · ' . (int)$cajas . ' cajas · ' . (int)$usuarios . ' usuarios · ' . esc_html($vigencia) . '</p>
+      <p><b>Tus descargas:</b></p>
+      <ul style="padding-left:20px;line-height:1.8">
+      ' . (!empty($cfg['descarga_instalador']) ? '<li><b>Instalador de Nexbit POS</b> (ZIP): <a href="' . esc_url($cfg['descarga_instalador']) . '">descargar Nexbit-POS-Setup.zip</a></li>' : '') . '
+      ' . (!empty($cfg['descarga_manual']) ? '<li><b>Manual de usuario</b> (PDF): <a href="' . esc_url($cfg['descarga_manual']) . '">descargar manual.pdf</a> — te guía en la instalación y la activación de tu licencia.</li>' : '') . '
+      </ul>
       <p><b>Cómo instalar y activar tu licencia:</b></p>
       <ol style="padding-left:20px;line-height:1.8">
-      <li>Descarga el instalador desde el enlace del correo de "pedido completado" o en <b>Mi Cuenta → Descargas</b> (el archivo viene comprimido en ZIP: descomprímelo y ejecuta <b>Nexbit-POS-Setup.exe</b>).</li>
+      <li>Descarga el instalador desde el enlace de arriba (viene comprimido en ZIP: descomprímelo y ejecuta <b>Nexbit-POS-Setup.exe</b>).</li>
       <li>Instala y abre <b>Nexbit POS</b>.</li>
       <li>Ve a <b>Config → Licencia</b> (en la instalación web: paso "Licencia" del instalador).</li>
       <li>Pega el código de abajo y pulsa <b>Activar</b>.</li>
@@ -303,6 +310,8 @@ function npl_pagina_config() {
       'mail_from' => sanitize_email(wp_unslash($_POST['mail_from'] ?? '')),
       'mail_from_nombre' => sanitize_text_field(wp_unslash($_POST['mail_from_nombre'] ?? '')),
       'exe_archivo' => sanitize_file_name(wp_unslash($_POST['exe_archivo'] ?? '')),
+      'descarga_instalador' => esc_url_raw(wp_unslash($_POST['descarga_instalador'] ?? '')),
+      'descarga_manual' => esc_url_raw(wp_unslash($_POST['descarga_manual'] ?? '')),
     ]);
     // los hostings con cach├® de objetos siguen leyendo el valor viejo: se la purgo
     if (function_exists('wp_cache_delete')) wp_cache_delete('npl_config', 'options');
@@ -351,6 +360,14 @@ function npl_pagina_config() {
             <input name="exe_archivo" value="<?php echo esc_attr($c['exe_archivo']); ?>" style="width:320px" class="regular-text" placeholder="nexbit-pos-setup.exe">
             <p class="description">Nombre del .exe que adjuntar├ís en el correo de B├ísico y Pro (los Multi no lo llevan). Debe estar subido en la carpeta del plugin: <code>wp-content/plugins/nexbit-pos-licencias/</code><br>
             <b>Ojo:</b> si el .exe pesa m├ís de ~20 MB muchos servidores de hosting no lo env├¡an (el correo falla y el pedido queda marcado <code>correo_fallo</code> para reenviarlo). Si pesa m├ís, lo recomendable es marcarlo como "Producto descargable" en WooCommerce (se env├¡a un enlace de descarga y aparece en Mi Cuenta ÔåÆ Descargas) y dejar este campo vac├¡o.</p>
+          </td>
+        </tr>
+        <tr>
+          <th><label>Enlaces del correo</label></th>
+          <td>
+            <input name="descarga_instalador" value="<?php echo esc_attr($c['descarga_instalador']); ?>" style="width:320px" class="regular-text" placeholder="https://tu-tienda.cl/.../setup.zip"><br>
+            <input name="descarga_manual" value="<?php echo esc_attr($c['descarga_manual']); ?>" style="width:320px" class="regular-text" placeholder="https://tu-tienda.cl/.../manual.pdf">
+            <p class="description">Enlaces de descarga que aparecen en el correo de la licencia: arriba el <b>instalador (ZIP)</b> y abajo el <b>manual de usuario (PDF)</b>. Si un campo queda vac├¡o, ese enlace no se muestra.</p>
           </td>
         </tr>
       </table>
