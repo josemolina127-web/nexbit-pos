@@ -183,6 +183,23 @@ add_filter('woocommerce_downloadable_file_types', function ($tipos) {
   return $tipos;
 });
 
+// ---- incluye la licencia dentro de los correos que envía WooCommerce al cliente ----
+add_action('woocommerce_email_after_order_table', 'npl_licencia_en_correo_woo', 10, 4);
+function npl_licencia_en_correo_woo($order, $sent_to_admin, $plain_text, $email) {
+  global $wpdb;
+  $tabla = $wpdb->prefix . NPL_TABLA;
+  $p = $wpdb->get_row($wpdb->prepare("SELECT * FROM `$tabla` WHERE woo_order_id = %d", (int)$order->get_id()));
+  if (!$p || empty($p->licencia)) return;
+  $vigencia = $p->tipo === 'vitalicia' ? 'De por vida' : 'Anual (renovable)';
+  if ($plain_text) {
+    echo "\nTU LICENCIA NEXBIT POS:\n" . $p->licencia . "\nPlan " . $p->plan . ' (' . (int)$p->max_cajas . ' cajas, ' . (int)$p->max_usuarios . " usuarios) - " . $vigencia . "\n";
+  } else {
+    echo '<h2 style="color:#96588a;display:block;font-family:inherit;font-size:22px;font-weight:bold;margin:40px 0 10px">Tu licencia Nexbit POS</h2>
+      <p style="background:#f6f6f7;border:1px dashed #ccc;border-radius:8px;padding:14px;font-family:monospace;font-size:14px">' . esc_html($p->licencia) . '</p>
+      <p>Plan ' . esc_html($p->plan) . ' · ' . (int)$p->max_cajas . ' cajas · ' . (int)$p->max_usuarios . ' usuarios · ' . esc_html($vigencia) . '</p>';
+  }
+}
+
 // ---- muestra la licencia al cliente en "Mi cuenta" → detalle del pedido ----
 add_action('woocommerce_order_details_after_order_table', 'npl_licencia_en_mi_cuenta');
 function npl_licencia_en_mi_cuenta($order) {
