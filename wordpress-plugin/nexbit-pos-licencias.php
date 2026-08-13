@@ -295,13 +295,14 @@ function npl_pagina_historial() {
 
 function npl_pagina_config() {
   if (!current_user_can('manage_options')) wp_die('Sin permisos');
+  $c = npl_opciones();
   if (isset($_POST['guardar'])) {
     check_admin_referer('npl_config');
     $productos = [];
     foreach (array_keys(npl_productos()) as $tipo) {
       $productos[$tipo] = absint($_POST['productos'][$tipo] ?? 0);
     }
-    update_option('npl_config', [
+    $guardado = update_option('npl_config', [
       'license_secret' => sanitize_text_field(wp_unslash($_POST['license_secret'] ?? '')),
       'productos' => $productos,
       'mail_from' => sanitize_email(wp_unslash($_POST['mail_from'] ?? '')),
@@ -312,7 +313,10 @@ function npl_pagina_config() {
       'smtp_usuario' => sanitize_email(wp_unslash($_POST['smtp_usuario'] ?? '')),
       'smtp_clave' => sanitize_text_field(wp_unslash($_POST['smtp_clave'] ?? '')),
     ]);
-    echo '<div class="notice notice-success is-dismissible"><p>Configuración guardada.</p></div>';
+    // los hostings con caché de objetos siguen leyendo el valor viejo: se la purgo
+    if (function_exists('wp_cache_delete')) wp_cache_delete('npl_config', 'options');
+    $c = npl_opciones();
+    echo '<div class="notice notice-success is-dismissible"><p>Configuración guardada ' . ($guardado ? '(cambios aplicados)' : '(los valores no cambiaron o ya estaban así)') . '.</p></div>';
     if (isset($_POST['probar'])) {
       $destino = $c['smtp_usuario'] !== '' ? $c['smtp_usuario'] : get_option('admin_email');
       $ok = wp_mail($destino, 'Prueba de correo Nexbit POS', '<p>Si recibes esto, el SMTP quedó bien configurado.</p>', ['Content-Type: text/html; charset=UTF-8']);
@@ -321,7 +325,6 @@ function npl_pagina_config() {
       echo '<div class="notice ' . ($ok ? 'notice-success' : 'notice-error') . ' is-dismissible"><p>' . ($ok ? 'Correo de prueba enviado a ' . esc_html($destino) : 'El correo de prueba FALLÓ (destino: ' . esc_html($destino) . '). Revisa servidor, puerto, cifrado, usuario y contraseña.') . $detalle . '</p></div>';
     }
   }
-  $c = npl_opciones();
   ?>
   <div class="wrap">
     <h1>Nexbit POS - Configuración</h1>
