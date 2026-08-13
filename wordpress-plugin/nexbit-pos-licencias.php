@@ -52,6 +52,11 @@ function npl_opciones() {
     'productos' => [],
     'mail_from' => '',
     'exe_archivo' => '',
+    'smtp_host' => '',
+    'smtp_port' => 465,
+    'smtp_cifrado' => 'ssl',
+    'smtp_usuario' => '',
+    'smtp_clave' => '',
   ];
   return wp_parse_args(get_option('npl_config', []), $def);
 }
@@ -96,7 +101,14 @@ function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, 
     <p>Hola ' . esc_html($nombre) . ', gracias por tu compra. Tu licencia de Nexbit POS:</p>
     <p style="background:#f6f6f7;border:1px dashed #ccc;border-radius:8px;padding:14px;font-family:monospace;font-size:14px">' . esc_html($licencia) . '</p>
     <p><b>Plan:</b> ' . esc_html($plan) . ' · ' . (int)$cajas . ' cajas · ' . (int)$usuarios . ' usuarios · ' . esc_html($vigencia) . '</p>
-    <p><b>Cómo activar:</b> pega el código en el paso "Licencia" del instalador web, o en Config → Licencia en la app de escritorio.</p>
+    <p><b>Cómo instalar y activar tu licencia:</b></p>
+    <ol style="padding-left:20px;line-height:1.8">
+    <li>Descarga el instalador desde el enlace del correo de "pedido completado" o en <b>Mi Cuenta → Descargas</b> (el archivo viene comprimido en ZIP: descomprímelo y ejecuta <b>Nexbit-POS-Setup.exe</b>).</li>
+    <li>Instala y abre <b>Nexbit POS</b>.</li>
+    <li>Ve a <b>Config → Licencia</b> (en la instalación web: paso "Licencia" del instalador).</li>
+    <li>Pega el código de abajo y pulsa <b>Activar</b>.</li>
+    </ol>
+    <p>El mismo código lo tienes siempre en <b>Mi Cuenta → Pedidos</b> (ver pedido) para volver a activarlo si cambias de equipo.</p>
     <p style="color:#777;font-size:12px">Nexbit POS — punto de venta para tu negocio.</p>
     </div></div>';
   $headers = ['Content-Type: text/html; charset=UTF-8'];
@@ -114,6 +126,23 @@ function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, 
     return $ok;
   }
   return wp_mail($para, $asunto, $html, $headers, []);
+}
+
+// ---- envia todo el correo de WordPress por SMTP (PHPMailer ya viene con WordPress) ----
+add_action('phpmailer_init', 'npl_smtp');
+function npl_smtp($pm) {
+  $cfg = npl_opciones();
+  if (empty($cfg['smtp_host']) || empty($cfg['smtp_usuario'])) return;
+  $pm->isSMTP();
+  $pm->Host = $cfg['smtp_host'];
+  $pm->Port = (int)($cfg['smtp_port'] ?: 465);
+  $pm->SMTPAuth = true;
+  $pm->Username = $cfg['smtp_usuario'];
+  $pm->Password = $cfg['smtp_clave'];
+  $pm->SMTPSecure = in_array($cfg['smtp_cifrado'], ['ssl', 'tls']) ? $cfg['smtp_cifrado'] : '';
+  $from = $cfg['mail_from'] !== '' ? $cfg['mail_from'] : $cfg['smtp_usuario'];
+  if ($from) $pm->From = $from;
+  $pm->FromName = 'Nexbit POS';
 }
 
 // ---- procesa un pedido pagado (se llama desde WooCommerce; idempotente) ----
@@ -277,8 +306,17 @@ function npl_pagina_config() {
       'productos' => $productos,
       'mail_from' => sanitize_email(wp_unslash($_POST['mail_from'] ?? '')),
       'exe_archivo' => sanitize_file_name(wp_unslash($_POST['exe_archivo'] ?? '')),
+      'smtp_host' => sanitize_text_field(wp_unslash($_POST['smtp_host'] ?? '')),
+      'smtp_port' => absint($_POST['smtp_port'] ?? 465),
+      'smtp_cifrado' => in_array($_POST['smtp_cifrado'] ?? '', ['ssl', 'tls', 'ninguno']) ? ($_POST['smtp_cifrado'] == 'ninguno' ? '' : $_POST['smtp_cifrado']) : 'ssl',
+      'smtp_usuario' => sanitize_email(wp_unslash($_POST['smtp_usuario'] ?? '')),
+      'smtp_clave' => sanitize_text_field(wp_unslash($_POST['smtp_clave'] ?? '')),
     ]);
     echo '<div class="notice notice-success is-dismissible"><p>Configuración guardada.</p></div>';
+    if (isset($_POST['probar'])) {
+      $ok = wp_mail(get_option('admin_email'), 'Prueba de correo Nexbit POS', '<p>Si recibes esto, el SMTP quedó bien configurado.</p>', ['Content-Type: text/html; charset=UTF-8']);
+      echo '<div class="notice ' . ($ok ? 'notice-success' : 'notice-error') . ' is-dismissible"><p>' . ($ok ? 'Correo de prueba enviado a ' . esc_html(get_option('admin_email')) : 'El correo de prueba FALLÓ. Revisa servidor, puerto, cifrado, usuario y contraseña.') . '</p></div>';
+    }
   }
   $c = npl_opciones();
   ?>
@@ -301,7 +339,30 @@ function npl_pagina_config() {
                 </tr>
               <?php endforeach; ?>
               </tbody>
+<tr>
+          <th><label>Correo SMTP (recomendado)</label></th>
+          <td>
+            <table class="widefat striped" style="max-width:560px">
+              <tr><td style="width:160px">Servidor SMTP</td><td><input name="smtp_host" value="<?php echo esc_attr($c['smtp_host']); ?>" style="width:100%" placeholder="mail.atga.cl"></td></tr>
+              <tr><td>Puerto</td><td><input name="smtp_port" type="number" value="<?php echo (int)$c['smtp_port']; ?>" style="width:100%" placeholder="465"></td></tr>
+              <tr><td>Cifrado</td><td><select name="smtp_cifrado" style="width:100%">
+                <option value="ssl" <?php selected($c['smtp_cifrado'], 'ssl'); ?>>SSL (puerto 465)</option>
+                <option value="tls" <?php selected($c['smtp_cifrado'], 'tls'); ?>>TLS (puerto 587)</option>
+                <option value="ninguno" <?php selected($c['smtp_cifrado'], ''); ?>>Sin cifrado (25)</option>
+              </select></td></tr>
+              <tr><td>Usuario</td><td><input name="smtp_usuario" value="<?php echo esc_attr($c['smtp_usuario']); ?>" style="width:100%" placeholder="licencias@atga.cl"></td></tr>
+              <tr><td>Contraseña</td><td><input name="smtp_clave" type="password" value="<?php echo esc_attr($c['smtp_clave']); ?>" style="width:100%"></td></tr>
             </table>
+            <p class="description">Sacá estos datos de cPanel → <b>Email Accounts</b> → botón <b>"Configurar cliente"</b> de tu buzón (o "Configuración manual"). Con esto, <b>todos</b> los correos de WordPress (los de WooCommerce incluidos) salen por tu buzón real y llegan.<br>
+            Si dejas el servidor vacío, se sigue usando mail() de PHP (el que falla).</p>
+          </td>
+        </tr>
+        <tr>
+          <th><label>Probar correo</label></th>
+          <td><button class="button" name="probar" value="1">Guardar y enviar correo de prueba</button>
+            <p class="description">Manda un correo de prueba a <b><?php echo esc_html(get_option('admin_email')); ?></b> (el correo del administrador). Si llega, todo funciona.</p></td>
+        </tr>
+      </table>
           </td>
         </tr>
         <tr>
