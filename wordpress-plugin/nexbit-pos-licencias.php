@@ -314,8 +314,11 @@ function npl_pagina_config() {
     ]);
     echo '<div class="notice notice-success is-dismissible"><p>Configuración guardada.</p></div>';
     if (isset($_POST['probar'])) {
-      $ok = wp_mail(get_option('admin_email'), 'Prueba de correo Nexbit POS', '<p>Si recibes esto, el SMTP quedó bien configurado.</p>', ['Content-Type: text/html; charset=UTF-8']);
-      echo '<div class="notice ' . ($ok ? 'notice-success' : 'notice-error') . ' is-dismissible"><p>' . ($ok ? 'Correo de prueba enviado a ' . esc_html(get_option('admin_email')) : 'El correo de prueba FALLÓ. Revisa servidor, puerto, cifrado, usuario y contraseña.') . '</p></div>';
+      $destino = $c['smtp_usuario'] !== '' ? $c['smtp_usuario'] : get_option('admin_email');
+      $ok = wp_mail($destino, 'Prueba de correo Nexbit POS', '<p>Si recibes esto, el SMTP quedó bien configurado.</p>', ['Content-Type: text/html; charset=UTF-8']);
+      $detalle = '';
+      if (!$ok && !empty($GLOBALS['phpmailer']->ErrorInfo)) $detalle = ' <br>Detalle: ' . esc_html($GLOBALS['phpmailer']->ErrorInfo);
+      echo '<div class="notice ' . ($ok ? 'notice-success' : 'notice-error') . ' is-dismissible"><p>' . ($ok ? 'Correo de prueba enviado a ' . esc_html($destino) : 'El correo de prueba FALLÓ (destino: ' . esc_html($destino) . '). Revisa servidor, puerto, cifrado, usuario y contraseña.') . $detalle . '</p></div>';
     }
   }
   $c = npl_opciones();
@@ -360,7 +363,7 @@ function npl_pagina_config() {
         <tr>
           <th><label>Probar correo</label></th>
           <td><button class="button" name="probar" value="1">Guardar y enviar correo de prueba</button>
-            <p class="description">Manda un correo de prueba a <b><?php echo esc_html(get_option('admin_email')); ?></b> (el correo del administrador). Si llega, todo funciona.</p></td>
+            <p class="description">Manda un correo de prueba a tu buzón SMTP (<b><?php echo esc_html($c['smtp_usuario'] !== '' ? $c['smtp_usuario'] : get_option('admin_email')); ?></b>) para que puedas verlo llegar. Revísalo en tu Webmail (cPanel → Webmail → Roundcube). Si falla, abajo muestra el detalle del error.</p></td>
         </tr>
       </table>
           </td>
