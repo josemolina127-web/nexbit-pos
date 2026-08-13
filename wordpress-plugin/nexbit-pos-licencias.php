@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Nexbit POS - Licencias
  * Description: Genera y envia automaticamente la licencia Nexbit POS cuando un pedido de WooCommerce queda pagado. Incluye historial de pedidos con sus licencias.
- * Version: 1.0.11
+ * Version: 1.0.12
  * Author: Nexbit
  * Requires at least: 5.8
  * Requires PHP: 7.4
@@ -10,7 +10,7 @@
 
 if (!defined('ABSPATH')) exit;
 
-define('NPL_VERSION', '1.0.11');
+define('NPL_VERSION', '1.0.12');
 define('NPL_TABLA', 'nexbit_pedidos');
 
 // ---- activacion: crea la tabla de pedidos (una sola, dentro de la BD de WordPress) ----
@@ -51,6 +51,7 @@ function npl_opciones() {
     'license_secret' => 'nxb7Hq3mP9xL2vRs',
     'productos' => [],
     'mail_from' => '',
+    'mail_from_nombre' => '',
     'exe_archivo' => '',
   ];
   return wp_parse_args(get_option('npl_config', []), $def);
@@ -109,7 +110,10 @@ function npl_enviar_correo($para, $nombre, $licencia, $plan, $cajas, $usuarios, 
       </div></div>';
     $headers = ['Content-Type: text/html; charset=UTF-8'];
     $cfg = npl_opciones();
-    if (!empty($cfg['mail_from'])) $headers[] = 'From: ' . $cfg['mail_from'];
+    if (!empty($cfg['mail_from'])) {
+      $nombre = trim(strip_tags(str_replace(['<', '>'], '', $cfg['mail_from_nombre'] ?? '')));
+      $headers[] = $nombre !== '' ? 'From: ' . $nombre . ' <' . $cfg['mail_from'] . '>' : 'From: ' . $cfg['mail_from'];
+    }
 
     $adjunto = '';
     if ($plan !== 'multi' && !empty($cfg['exe_archivo'])) {
@@ -297,6 +301,7 @@ function npl_pagina_config() {
       'license_secret' => sanitize_text_field(wp_unslash($_POST['license_secret'] ?? '')),
       'productos' => $productos,
       'mail_from' => sanitize_email(wp_unslash($_POST['mail_from'] ?? '')),
+      'mail_from_nombre' => sanitize_text_field(wp_unslash($_POST['mail_from_nombre'] ?? '')),
       'exe_archivo' => sanitize_file_name(wp_unslash($_POST['exe_archivo'] ?? '')),
     ]);
     // los hostings con cach├® de objetos siguen leyendo el valor viejo: se la purgo
@@ -331,9 +336,14 @@ function npl_pagina_config() {
           <th><label>Secreto de licencias</label></th>
           <td><input name="license_secret" value="<?php echo esc_attr($c['license_secret']); ?>" style="width:320px" class="regular-text"><p class="description">Debe coincidir con el secreto de firmado de la app (web/api/index.php). No lo compartas.</p></td>
         </tr>
-        <tr>
+<tr>
           <th><label>Correo remitente</label></th>
-          <td><input name="mail_from" value="<?php echo esc_attr($c['mail_from']); ?>" style="width:320px" class="regular-text"><p class="description">Opcional. Si lo dejas vac├¡o usa el correo del sitio. Los env├¡os usan wp_mail (el correo de tu WordPress).</p></td>
+          <td>
+            <input name="mail_from" value="<?php echo esc_attr($c['mail_from']); ?>" style="width:320px" class="regular-text" placeholder="pos@atga.cl">
+            <input name="mail_from_nombre" value="<?php echo esc_attr($c['mail_from_nombre']); ?>" style="width:320px" class="regular-text" placeholder="Nombre (ej: Nexbit POS o Next Byte)">
+            <p class="description">El correo de la licencia saldrá como <b><?php echo esc_html(($c['mail_from_nombre'] !== '' ? $c['mail_from_nombre'] : 'Nexbit POS') . ' <' . ($c['mail_from'] !== '' ? $c['mail_from'] : 'tu-correo@tudominio.cl') . '>'); ?></b>.<br>
+            Usa una dirección de un buzón real de tu cPanel (ej: pos@atga.cl). Si lo dejas vacío, saldrá como "WordPress &lt;wordpress@tu-dominio&gt;". Solo afecta a los correos de licencia, no a los de WooCommerce.</p>
+          </td>
         </tr>
         <tr>
           <th><label>Instalador para adjuntar</label></th>
